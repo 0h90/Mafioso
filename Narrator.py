@@ -174,11 +174,11 @@ Everyone at night must act!```"
 
         if self.time == "Day":
             await self.broadcast_message()
-            for channel in self.day_channels:
-            await channel.send(self.get_players_as_indices())
+            for name, channel in self.day_channels.items():
+                await channel.send(self.get_players_as_indices())
         elif self.time == "Night":
-            for channel in self.night_channels:
-            await channel.send(self.get_players_as_indices())
+            for name, channel in self.night_channels.items():
+                await channel.send(self.get_players_as_indices())
 
     async def update_actset(self):
         if self.time == "Night":
