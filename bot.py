@@ -33,6 +33,10 @@ class MafiaClient(discord.Client):
         self.day = False
         self.alive_role = ""
         self.dead_role = ""
+        self.night_role = ""
+        self.day_role = ""
+        self.night_role_count = 0
+        self.current_act_count = 0
         self.voted_set = set()
 
     async def on_ready(self):
@@ -51,6 +55,9 @@ class MafiaClient(discord.Client):
         await player_to_kill.edit(roles=[self.dead_role])
         if player_to_kill in self.mafia:
             self.mafia.remove(player_to_kill)
+
+    async def night_role_act(self, role, message):
+
 
     async def on_reaction_add(self, reaction, user):   
         if not self.being_setup:
@@ -120,10 +127,12 @@ class MafiaClient(discord.Client):
                     print(role.name)
                     if role.name == "Alive":
                         self.alive_role = role
-                        print(self.alive_role.id)
                     if role.name == "Dead":
                         self.dead_role = role
-                        print(self.dead_role)
+                    if role.name == "Day":
+                        self.day_role = role
+                    if role.name == "Night":
+                        self.night_role = role
                         
                 await self.get_participants_message.add_reaction("✅")
                 await create_message("Villagers", True)
@@ -141,12 +150,17 @@ class MafiaClient(discord.Client):
                 used_players = []
                 random.seed(datetime.now())
                 for mafia_type in self.mafia_types:
+                    self.night_role_count += 1
                     type_count = self.characters[mafia_type]
                     for i in range(0, type_count):
                         rand_player = random.randint(0, len(self.participants) - 1)
                         self.mafia.add(self.participants[rand_player])
                         used_players.append(self.participants.pop(rand_player))                           
                 for villager_type in self.villager_types:
+                    if villager_type == "Doctor":
+                        self.night_role_count += 1
+                    elif villager_type == "Cop":
+                        self.night_role_count += 1
                     type_count = self.characters[villager_type]
                     for i in range(0, type_count):
                         rand_player = random.randint(0, len(self.participants) - 1)
@@ -164,14 +178,15 @@ class MafiaClient(discord.Client):
                 
                 overwrites[self.alive_role] = discord.PermissionOverwrite(read_messages=False)
                 overwrites[self.dead_role] = discord.PermissionOverwrite(send_messages=False)
-                
                 overwrites_copy = overwrites.copy()
 
                 for player in self.villagers:
                     overwrites_copy[message.guild.get_member(player.id)] = discord.PermissionOverwrite(read_messages=True)
 
-                overwrites_copy[self.alive_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+                overwrites_copy[self.alive_role] = discord.PermissionOverwrite(read_messages=True)
                 overwrites_copy[self.dead_role] = discord.PermissionOverwrite(send_messages=False)
+                overwrites_copy[self.day_role] = discord.PermissionOverwrite(send_messages=True)
+                overwrites_copy[self.night_role] = discord.PermissionOverwrite(send_messages=False)
 
                 await self.assign_roles(message)
                 self.mafia_channels.append(await message.guild.create_text_channel("Mafia", overwrites=overwrites))
