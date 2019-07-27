@@ -95,12 +95,16 @@ class MafiaClient(discord.Client):
 
             elif command == "lynch":
                 await self.narrator.on_lynch(message)
-
-            elif command == "secretsauce":
-                self.game_running = False
             
             elif command == "ketchup":
                 await self.narrator.cleanup()
+                self.game_running = False
+                self.characters = defaultdict(int)
+                self.messages = defaultdict(str)
+                self.total_players = 0
+                self.participants = []
+                self.get_participants_message = ""
+                self.narrator = Narrator.Narrator()
 
 
 api_file = open("apikey", "r") 
