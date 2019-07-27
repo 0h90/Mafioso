@@ -6,5 +6,8 @@ class Cop():
         self.alignment = "Villager"
 
     def act(self, narrator, message):
-        investigate_id = message.mentions[0]
+        investigate_id = message.mentions[0].id
         narrator.investigate(investigate_id)
+    
+    def get_act_time(self):
+        return self.act_time
