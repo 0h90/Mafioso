@@ -36,12 +36,27 @@ class Narrator():
         # The "to_act" count for the current time
         self.to_act = set()
 
+        # Same as to act, but for lynching
+        self.to_lynch = set()
+
         # Day: Lynch votes
         # Night: Kill votes
         self.votes = {}
 
         # Day and Night time
         self.time = "Night"
+
+        # Person who was saved (If there is a doctor)
+        self.save_id = 0
+
+        # Person who was investigated (If there is a cop)
+        self.investigate_id = 0
+
+        # Narrator message / Log of events
+        self.narrator_message = ""
+
+        # Separate messages to send to roles
+        self.individual_messages = {}
 
     # To be called after object instantiation
     # Does all the required async initialisation
@@ -77,6 +92,8 @@ class Narrator():
 
         for player, val in self.players.items():
             if val.can_act is True:
+                if val.name == "Mafia":
+                    continue
                 curr_perms = base_perms.copy()
                 curr_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
                 if val.act_time == "Day":
@@ -92,6 +109,13 @@ class Narrator():
 
     async def assign_role(self, player_id, role_name):
         await self.guild.get_member(player_id).edit(roles=[self.roles[role_name]])
+    
+    async def broadcast_message(self):
+        for channel, msg in self.individual_messages.items():
+            self.night_channels[channel].send(msg)
+        self.day_channels["Town Hall"].send(self.narrator_message)
+        self.narrator_message = ""
+        self.individual_messages = {}
 
     async def update(self):
         if self.time == "Night":
@@ -102,14 +126,20 @@ class Narrator():
         await self.update_actset()
         await self.update_permissions()
 
+        await self.broadcast_message()
+
     async def update_actset(self):
         if self.time == "Night":
-            for player, val in self.mafia.items():
-                self.to_act.add(player)
-        else:
             for player, val in self.players.items():
-                if val.can_act is True:
+                if val.can_act is True and val.act_time == "Night":
                     self.to_act.add(player)
+            self.to_lynch = set()
+
+        elif self.time == "Day":
+            for player, val in self.players.items():
+                if val.can_act is True and val.act_time == "Day":
+                    self.to_act.add(player)
+                self.to_lynch.add(player)
         
     async def update_permissions(self):
         if self.time == "Day":
@@ -130,7 +160,17 @@ class Narrator():
         acting_entity = self.players[player_id]
         acting_entity.act(self)
 
-        if len(self.to_act) == 0:
+        if len(self.to_act) == 0 and len(self.to_lynch) == 0:
+            self.finalise(message)
+
+    def on_lynch(self, message):
+        player_id = message.User.id
+        if player_id in self.to_lynch:
+            self.to_lynch.remove(message.User.id)
+
+        lynch_id = message.mentions[0].id
+        self.votes[player_id] = lynch_id
+        if len(self.to_lynch) == 0:
             self.finalise(message)
 
     def finalise(self, message):
@@ -171,6 +211,26 @@ class Narrator():
         return player_to_kill
 
     async def on_kill(self, player_to_kill):
+        if self.save_id == player_to_kill:
+            currmsg = "Looks like the doctor did a good job that night"
+            print(currmsg)
+            self.narrator_message += currmsg
+            return
         print("Killing: {}".format(player_to_kill))
         self.players.pop(player_to_kill)
         self.assign_role(player_to_kill, "Dead")
+    
+    def add_vote(self, voter, vote):
+        self.votes[voter] = vote
+
+    def save(self, save_id):
+        self.save_id = save_id
+
+    def investigate(self, investigate_id):
+        curr_msg = ""
+        if investigate_id in self.mafia:
+            curr_msg = "You find out that the person you investigated was mafia!"
+        else:
+            curr_msg = "You visited a good guy"
+
+        self.individual_messages["Cop"] = curr_msg
