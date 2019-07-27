@@ -65,6 +65,8 @@ class Narrator():
         # Separate messages to send to roles
         self.individual_messages = {}
 
+        self.index_id_map = {}
+
     # To be called after object instantiation
     # Does all the required async initialisation
     async def create(self, message, role_dictionary, players):
@@ -132,7 +134,15 @@ class Narrator():
                 elif val.act_time == "Night":
                     curr_perms[self.roles["Night"]] = discord.PermissionOverwrite(send_messages=True)
                     self.night_channels[val.name] = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
+        
+        help_msg = "``` During the day, villagers vote to lynch a player using ::lynch [number]\n \
+During the night, mafia vote to kill a player using ::act [number]\n \
+Other roles, such as a doctor/cop act on a player using ::act [number]\n \
+Where [number] corresponds to the player to be acted on\n \
+Everyone at night must act!```"
+        self.narrator_message = help_msg
 
+        await self.broadcast_message()
         
         await self.update()
 
@@ -150,18 +160,25 @@ class Narrator():
         self.individual_messages = {}
 
     async def update(self):
+        await self.check_win_condition()
+
         if self.time == "Night":
             self.time = "Day"
-            await self.day_channels["Town Hall"].send("Rise and shine kids. A new day beckons!")
+            await self.day_channels["Town Hall"].send("@here Rise and shine kids. A new day beckons!")
         elif self.time == "Day":
             self.time = "Night"
-            await self.day_channels["Town Hall"].send("Time to sleep kids. The mafia are coming out.")
+            await self.day_channels["Town Hall"].send("@here Time to sleep kids. The mafia are coming out.")
 
         await self.update_actset()
         await self.update_permissions()
 
         if self.time == "Day":
             await self.broadcast_message()
+            for channel in self.day_channels:
+            await channel.send(self.get_players_as_indices())
+        elif self.time == "Night":
+            for channel in self.night_channels:
+            await channel.send(self.get_players_as_indices())
 
     async def update_actset(self):
         if self.time == "Night":
@@ -218,7 +235,7 @@ class Narrator():
             return
         player_id = message.author.id
         if player_id in self.to_lynch:
-            self.to_lynch.remove(message.User.id)
+            self.to_lynch.remove(message.author.id)
 
         lynch_id = message.mentions[0].id
         self.votes[player_id] = lynch_id
@@ -276,7 +293,6 @@ class Narrator():
             self.mafia.pop(player_to_kill)
         self.players.pop(player_to_kill)
 
-        await self.check_win_condition()
 
         await self.assign_role(player_to_kill, "Dead")
     
@@ -311,10 +327,23 @@ class Narrator():
     async def check_win_condition(self):
         if len(self.mafia) >= (len(self.players) / 2):
             await self.day_channels["Town Hall"].send("@here Mafia won!")
+            time.sleep(5)
+            await self.cleanup()        
         elif len(self.mafia) == 0:
             await self.day_channels["Town Hall"].send("@here Villagers won!")
-        time.sleep(5)
-        self.cleanup()        
+            time.sleep(5)
+            await self.cleanup()        
+    
+    def get_players_as_indices(self):
+        player_list = ""
+        for i, (player, val) in enumerate(self.players.items()):
+            curr_str = str(i) + ": " + self.guild.get_member(player).name + '\n'
+            player_list += curr_str
+            self.index_id_map[i] = player
+        return player_list
 
     def get_time(self):
         return self.time
+    
+    def get_index_id_map(self):
+        return self.index_id_map

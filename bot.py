@@ -82,9 +82,11 @@ class MafiaClient(discord.Client):
                 if message.author != self.game_admin:
                     return
                 self.being_setup = False
-                await message.channel.send("Total players: {}".format(self.total_players)) 
+                msg = ""
+                msg += "Total players: {}\n".format(self.total_players)
                 for character, count in self.characters.items():
-                    await message.channel.send("Total {}: {}".format(character, count))
+                    msg += "Final {} count: {}\n".format(character, count)
+                await message.channel.send(msg)
                 
                 await self.narrator.create(message, self.characters, self.participants)
             
