@@ -106,6 +106,9 @@ class Narrator():
         self.roles["Night"] = await message.guild.create_role(name="Night")
         self.roles["Alive"] = await message.guild.create_role(name="Alive")
 
+        await self.roles["Dead"].edit(position=1, hoist=True)
+        await self.roles["Alive"].edit(position=1, hoist=True)
+
         # Create permissions and channels
         base_perms = { message.guild.default_role : discord.PermissionOverwrite(read_messages=False,send_messages=False) }
         base_perms[self.roles["Dead"]] = discord.PermissionOverwrite(read_messages=True)
@@ -148,15 +151,14 @@ class Narrator():
                     self.night_channels[val.name] = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
         
         for name, channel in self.night_channels.items():
-            await channel.send("@here Your assigned role: {}".format(name))
-            await channel.send("You can act on a player.\nEnter `::act number` to act on them.\nFor a description on what acting on someone does - check out #town-hall.")
+            await channel.send("@here Your assigned role: {}\nYou can act on a player.\nEnter `!act number` (that's an exclamation mark) to act on them.\nFor example, `!act 1` will act on player 1.\nFor a description on what acting on someone does - check out #town-hall.".format(name))
 
         for name, channel in self.day_channels.items():
             if name == "Town Hall":
                 continue
             await channel.send("@here Your assigned role: {}".format(name))
             if name == "TownCrier":
-                await channel.send("You can act.\nEnter `::act [message]` to have [message] broadcasted ANONYMOUSLY in #town-hall.")
+                await channel.send("You can act.\nEnter `!act [message]` to have [message] broadcasted ANONYMOUSLY in #town-hall.")
         
         help_msg = "``` The aim of the game depends on your alignment. \n \
 Mafia win condition: Have number of alive mafia be greater/equal to number of alive villagers \n \
@@ -167,11 +169,11 @@ It is locked during the night.\n \
 You will have a dedicated channel for your role. \n \
 No channel means you are a peasant villager. \n \
 During the day, villagers vote to lynch a player using \n \
-::lynch number\n \
+!lynch number\n \
 During the night, mafia vote to kill a player using \n \
-::act number\n \
+!act number\n \
 Other roles, such as a doctor/cop act on a player using \n \
-::act number\n \
+!act number\n \
 Where 'number' corresponds to the player to be acted on\n \
 Everyone at night must act!``` \
 ``` Current Roles: (D/N indicates whether they can act during the [D]ay or [N]ight)\n \
@@ -391,7 +393,7 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             return
         
         if self.time == "Night":
-            await self.broadcast_message("Town Hall", "{} was found swimming with the fishies!\n".format(self.guild.get_member(player_to_kill).name))
+            await self.broadcast_message("Town Hall", "{} was found swimming with the fishies!".format(self.guild.get_member(player_to_kill).name))
         elif self.time == "Day":
             await self.broadcast_message("Town Hall", "{} was lynched!".format(self.guild.get_member(player_to_kill).name))
 

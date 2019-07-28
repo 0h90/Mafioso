@@ -25,7 +25,7 @@ class MafiaClient(discord.Client):
 
     async def on_ready(self):
         print("Logged on as {}!".format(self.user))
-        self.regex = re.compile("(^::)([^ ]+)")
+        self.regex = re.compile("(^\!)([^ ]+)")
         self.being_setup = False
     
     async def on_reaction_add(self, reaction, user):   
@@ -68,16 +68,16 @@ class MafiaClient(discord.Client):
                 self.messages[curr_msg.id] = current_type
             
             if command == "help":
-                await message.channel.send("```::init - Initialise game players\n\
-::start - Start game after initialisation\n\
-::reset - Reset everything\n\
-::help - Display this message\n\
-::act <number> - Act on <number\> if your role has the ability to act\n\
-::lynch <number> - Lynch <number\>\n\
-::abstain - Abstain from lynching. If you already voted - removes your vote\n\
-::tovote - Get players who have not voted for lynching\n\
-::timer - Force a lynch in 1 minute\n\
-::gamecomp - Get game composition```")
+                await message.channel.send("```!init - Initialise game players\n\
+!start - Start game after initialisation\n\
+!reset - Reset everything\n\
+!help - Display this message\n\
+!act <number> - Act on <number\> if your role has the ability to act\n\
+!lynch <number> - Lynch <number\>\n\
+!abstain - Abstain from lynching. If you already voted - removes your vote\n\
+!tovote - Get players who have not voted for lynching\n\
+!timer - Force a lynch in 1 minute\n\
+!gamecomp - Get game composition```")
                 
             if command == "init":
                 if self.game_running is True:
