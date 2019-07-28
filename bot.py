@@ -30,7 +30,7 @@ class MafiaClient(discord.Client):
 
         if reaction.message.id == self.get_participants_message.id:
             if reaction.emoji == "✅":
-                if user not in self.participants and user != self.user:
+                if user.id not in self.participants and user != self.user:
                     self.participants.append(user.id)
                     await self.get_participants_message.edit(content="Current Participants: {}".format(len(self.participants))) 
         elif user == self.game_admin and (str(reaction.emoji) == "⬇" or str(reaction.emoji) == "⬆"):
@@ -96,8 +96,10 @@ class MafiaClient(discord.Client):
             elif command == "lynch":
                 await self.narrator.on_lynch(message)
             
-            elif command == "ketchup":
+            elif command == "destroy":
                 await self.narrator.cleanup()
+            
+            elif command =="reset":
                 self.game_running = False
                 self.characters = defaultdict(int)
                 self.messages = defaultdict(str)
