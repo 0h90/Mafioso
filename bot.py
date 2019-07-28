@@ -5,6 +5,9 @@ from collections import defaultdict
 import random
 from datetime import datetime
 import Narrator
+import time
+import threading
+import math
 
 class MafiaClient(discord.Client):
     def __init__(self):
@@ -18,6 +21,7 @@ class MafiaClient(discord.Client):
         self.participants = []
         self.get_participants_message = ""
         self.narrator = Narrator.Narrator()
+        self.timer_votes = 0
 
     async def on_ready(self):
         print("Logged on as {}!".format(self.user))
@@ -66,13 +70,13 @@ class MafiaClient(discord.Client):
             if command == "help":
                 await message.channel.send("```::init - Initialise game players\n\
 ::start - Start game after initialisation\n\
-::destroy - Prematurely destroy anything\n\
 ::reset - Reset everything\n\
 ::help - Display this message\n\
-::act <number\> - Act on <number\> if your role has the ability to act\n\
-::lynch <number\> - Lynch <number\>\n\
+::act <number> - Act on <number\> if your role has the ability to act\n\
+::lynch <number> - Lynch <number\>\n\
 ::abstain - Abstain from lynching. If you already voted - removes your vote\n\
 ::tovote - Get players who have not voted for lynching\n\
+::timer - Force a lynch in 1 minute\n\
 ::gamecomp - Get game composition```")
                 
             if command == "init":
@@ -118,17 +122,38 @@ class MafiaClient(discord.Client):
             elif command == "gamecomp":
                 await self.narrator.broadcast_censoredcomp()
 
-            elif command == "destroy":
-                await self.narrator.cleanup()
-            
-            elif command =="reset":
-                self.game_running = False
-                self.characters = defaultdict(int)
-                self.messages = defaultdict(str)
-                self.total_players = 0
-                self.participants = []
-                self.get_participants_message = ""
-                self.narrator = Narrator.Narrator()
+            elif command == "timer":
+                async def coroutine():
+                    await asyncio.sleep(60)
+                    if self.narrator.update_c == 0:
+                        await self.narrator.finalise(message)                    
+                    return "Done"
+                
+                if self.narrator.get_time() == "Night":
+                    return
+                
+                self.timer_votes += 1
+                if self.timer_votes < (self.narrator.get_alive_count() / 2):
+                    await self.narrator.broadcast_message("Town Hall" , "Require: {} more votes".format(math.ceil(self.narrator.get_alive_count() / 2) - self.timer_votes))
+                    return
+
+                await self.narrator.broadcast_message("Town Hall", "Starting timer, 1 minute until forced lynch.")
+                self.narrator.update_c = 0
+                asyncio.create_task(coroutine())
+
+            elif command == "reset":
+                if message.author == self.game_admin:
+                    await self.narrator.broadcast_message("Town Hall", "Cleaning up game")
+                    await self.narrator.cleanup()
+                    self.game_admin = ""
+                    self.being_setup = False
+                    self.game_running = False
+                    self.characters = defaultdict(int)
+                    self.messages = defaultdict(str)
+                    self.total_players = 0
+                    self.participants = []
+                    self.get_participants_message = ""
+                    self.narrator = Narrator.Narrator()
 
 
 api_file = open("apikey", "r") 

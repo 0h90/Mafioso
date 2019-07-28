@@ -70,6 +70,9 @@ class Narrator():
 
         self.game_composition = {}
 
+        # Set to 0 by the timer feature
+        self.update_c = 1
+
     # To be called after object instantiation
     # Does all the required async initialisation
     async def create(self, message, role_dictionary, players):
@@ -157,8 +160,10 @@ class Narrator():
         
         help_msg = "``` The aim of the game depends on your alignment. \n \
 Mafia win condition: Have number of alive mafia be greater/equal to number of alive villagers \n \
-Villager win condition: Lynch all mafia``` \
-``` The #town-hall is where the daytime discussion takes place. It is locked during the night.\n \
+Villager win condition: Lynch all mafia\n \``` \
+``` The #town-hall is where the daytime discussion takes place.\n \
+Villagers discuss who the mafia possibly is and vote to lynch them. \n \
+It is locked during the night.\n \
 You will have a dedicated channel for your role. \n \
 No channel means you are a peasant villager. \n \
 During the day, villagers vote to lynch a player using \n \
@@ -198,7 +203,9 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
         self.individual_messages = {}
 
     async def update(self):
-        await self.check_win_condition()
+        win = await self.check_win_condition()
+        if win == 1:
+            return
 
         if self.time == "Night":
             self.time = "Day"
@@ -316,6 +323,7 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             await self.finalise(message)
 
     async def finalise(self, message):
+        self.update_c = 1
         if self.time == "Day":
             player_id = self.get_max_vote() 
             if player_id == -1:
@@ -333,10 +341,12 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
         await self.update()
 
     async def broadcast_current_votes(self):
-        vote_counter = defaultdict(int)
         if len(self.votes) == 0:
             if self.time == "Day":
                 await self.broadcast_message("Town Hall", "No votes so far")
+                return
+
+        vote_counter = defaultdict(int)
         for key, val in self.votes.items():
             vote_counter[val] += 1
 
@@ -425,12 +435,15 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             await self.day_channels["Town Hall"].send("@here Mafia won!")
             await self.broadcast_gamecomp()
             time.sleep(15)
-            await self.cleanup()        
+            #await self.cleanup()        
+            return 1
         elif len(self.mafia) == 0:
             await self.day_channels["Town Hall"].send("@here Villagers won!")
             await self.broadcast_gamecomp()
             time.sleep(15)
-            await self.cleanup()        
+            #await self.cleanup()
+            return 1
+        return 0      
     
     def get_players_as_indices(self):
         player_list = "=============PLAYER LIST=============\n"
@@ -474,3 +487,6 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
     
     def get_index_id_map(self):
         return self.index_id_map
+    
+    def get_alive_count(self):
+        return len(self.players)
