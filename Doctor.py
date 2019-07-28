@@ -4,6 +4,7 @@ class Doctor():
         self.can_act = True
         self.act_time = "Night"
         self.alignment = "Villager"
+        self.need_await = False
     
     def act(self, narrator, message):
         index = int(message.content.split(" ")[1])

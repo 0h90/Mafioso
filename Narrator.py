@@ -9,6 +9,7 @@ import Mafia
 import Cop
 import Villager
 import Doctor
+import TownCrier
 
 class Narrator():
     def __init__(self):
@@ -91,6 +92,8 @@ class Narrator():
                     self.players[players[rand_player]] = Villager.Villager()
                 elif char_type == "Cop":
                     self.players[players[rand_player]] = Cop.Cop()
+                elif char_type == "TownCrier":
+                    self.players[players[rand_player]] = TownCrier.TownCrier()
                 players.remove(players[rand_player])
         
         self.game_composition = self.players.copy()
@@ -144,7 +147,14 @@ class Narrator():
         
         for name, channel in self.night_channels.items():
             await channel.send("@here Your assigned role: {}".format(name))
-            await channel.send("You can act on a player.\nEnter `::act number` to act on them.\nFor a description on what acting on someone does - check out #town-hall")
+            await channel.send("You can act on a player.\nEnter `::act number` to act on them.\nFor a description on what acting on someone does - check out #town-hall.")
+
+        for name, channel in self.day_channels.items():
+            if name == "Town Hall":
+                continue
+            await channel.send("@here Your assigned role: {}".format(name))
+            if name == "TownCrier":
+                await channel.send("You can act.\nEnter `::act [message]` to have [message] broadcasted ANONYMOUSLY in #town-hall.")
         
         help_msg = "``` The aim of the game depends on your alignment. \n \
 Mafia win condition: Have number of alive mafia be greater/equal to number of alive villagers \n \
@@ -160,11 +170,13 @@ Other roles, such as a doctor/cop act on a player using \n \
 ::act number\n \
 Where 'number' corresponds to the player to be acted on\n \
 Everyone at night must act!``` \
-``` Current Roles: (D/N indicate whether they can act during the [D]ay or [N]ight)\n \
-Villager[D]: Peasant - can only lynch\n \
-Doctor[N]: Acting on someone prevents them from being killed by the mafia at night\n \
-Cop[N]: Acting on someone reports to the cop the following day about the player's alignment\n \
-Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be killed by the following day```"
+``` Current Roles: (D/N indicates whether they can act during the [D]ay or [N]ight)\n \
+V/M indicates whether they belong to [V]illagers or [M]afia\n \
+Villager[D/V]: Peasant - can only lynch\n \
+Town Crier[D/V]: Talks shit - Acting anonymously broadcasts message to Town Hall\n \
+Doctor[N/V]: Acting on someone prevents them from being killed by the mafia at night\n \
+Cop[N/V]: Acting on someone reports to the cop the following day about the player's alignment\n \
+Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will be killed by the following day```"
         await self.broadcast_message("Town Hall", help_msg)
         
         await self.update()
@@ -255,7 +267,10 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
             print("Time mismatch?")
             return
 
-        acting_entity.act(self, message)
+        if acting_entity.need_await is True:
+            await acting_entity.act(self, message)
+        else:
+            acting_entity.act(self, message)
 
         print("Player id: {}".format(player_id))
         print("To act: {}".format(self.to_act))
@@ -371,7 +386,7 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
         print("Player dying : {}".format(self.guild.get_member(player_to_kill).name))
 
         await self.assign_role(player_to_kill, ["Dead"])
-        self.dead_channel.send("@here Another one has joined the ranks :)")
+        await self.dead_channel.send("@here Another one has joined the ranks :)")
     
     def add_vote(self, voter, vote):
         self.votes[voter] = vote
@@ -454,7 +469,7 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
         role_count_map = defaultdict(int)
         game_comp = "==============GAME COMP==============\n"
         for player, val in self.game_composition.items():
-            role_count_map[self.players[player].name] += 1
+            role_count_map[val.name] += 1
         
         for role_name, count in role_count_map.items():
             curr_str = role_name + ": " + str(count) + '\n'

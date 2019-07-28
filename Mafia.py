@@ -4,6 +4,7 @@ class Mafia():
         self.can_act = True
         self.act_time = "Night"
         self.alignment = "Mafia"
+        self.need_await = False
 
     def act(self, narrator, message):
         voter_id = message.author.id

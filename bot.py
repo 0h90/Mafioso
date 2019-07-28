@@ -88,6 +88,7 @@ class MafiaClient(discord.Client):
                 await create_message("Mafia")
                 await create_message("Doctor")
                 await create_message("Cop")
+                await create_message("TownCrier")
             
             elif command == "start":
                 if message.author != self.game_admin:

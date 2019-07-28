@@ -4,6 +4,7 @@ class Villager():
         self.can_act = False
         self.act_time = "Day"
         self.alignment = "Villager"
+        self.need_await = False
     
     def act(self, narrator, message):
         return -1
