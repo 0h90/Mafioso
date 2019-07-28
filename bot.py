@@ -133,9 +133,13 @@ class MafiaClient(discord.Client):
                     return
                 
                 self.timer_votes += 1
+                print("Curr votes: {}".format(self.timer_votes))
+                print ("Returned votes: {} and /2: {}".format(self.narrator.get_alive_count(), (self.narrator.get_alive_count() / 2)))
                 if self.timer_votes < (self.narrator.get_alive_count() / 2):
                     await self.narrator.broadcast_message("Town Hall" , "Require: {} more votes".format(math.ceil(self.narrator.get_alive_count() / 2) - self.timer_votes))
                     return
+                
+                self.timer_votes = 0
 
                 await self.narrator.broadcast_message("Town Hall", "Starting timer, 1 minute until forced lynch.")
                 self.narrator.update_c = 0
