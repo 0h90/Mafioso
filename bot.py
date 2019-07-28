@@ -62,8 +62,19 @@ class MafiaClient(discord.Client):
                 await curr_msg.add_reaction("⬆")
                 await curr_msg.add_reaction("⬇")
                 self.messages[curr_msg.id] = current_type
+            
+            if command == "help":
+                await message.channel.send("```::init - Initialise game players\n\
+::start - Start game after initialisation\n\
+::destroy - Prematurely destroy anything\n\
+::reset - Reset everything\n\
+::help - Display this message\n\
+::act <number\> - Act on <number\> if your role has the ability to act\n\
+::lynch <number\> - Lynch <number\>\n\
+::tovote - Get players who have not voted for lynching\n\
+::gamecomp - Get game composition```")
                 
-            if command == "start":
+            if command == "init":
                 if self.game_running is True:
                     await message.channel.send("Game is already running")
                     return
@@ -78,7 +89,7 @@ class MafiaClient(discord.Client):
                 await create_message("Doctor")
                 await create_message("Cop")
             
-            elif command == "fin":
+            elif command == "start":
                 if message.author != self.game_admin:
                     return
                 self.being_setup = False
@@ -96,6 +107,12 @@ class MafiaClient(discord.Client):
             elif command == "lynch":
                 await self.narrator.on_lynch(message)
             
+            elif command == "tovote":
+                await self.narrator.broadcast_tolynch()
+            
+            elif command == "gamecomp":
+                await self.narrator.broadcast_censoredcomp()
+
             elif command == "destroy":
                 await self.narrator.cleanup()
             

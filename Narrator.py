@@ -156,7 +156,8 @@ During the day, villagers vote to lynch a player using \n \
 ::lynch number\n \
 During the night, mafia vote to kill a player using \n \
 ::act number\n \
-Other roles, such as a doctor/cop act on a player using ::act number\n \
+Other roles, such as a doctor/cop act on a player using \n \
+::act number\n \
 Where 'number' corresponds to the player to be acted on\n \
 Everyone at night must act!``` \
 ``` Current Roles: (D/N indicate whether they can act during the [D]ay or [N]ight)\n \
@@ -350,15 +351,17 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
             print(self.guild.get_member(idd).name)
         print("Current count: {}".format(len(self.players)))
 
+        currmsg = ""
         if self.save_id == player_to_kill:
             self.save_id = 0
             currmsg = "Looks like the doctor did a good job that night!\n"
-            print(currmsg)
             self.narrator_message += currmsg
             return
         
         if self.time == "Night":
-            currmsg = "{} was found swimming with the fishies!\n".format(self.guild.get_member(player_to_kill))
+            currmsg = "{} was found swimming with the fishies!\n".format(self.guild.get_member(player_to_kill).name)
+        elif self.time == "Day":
+            currmsg = "{} was lynched!".format(self.guild.get_member(player_to_kill).name)
 
         self.narrator_message += currmsg
         if player_to_kill in self.mafia:
@@ -386,12 +389,10 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
        
         curr_msg = ""
 
-        for key, val in self.mafia.items():
-            print("type of invest: {}\ntype of key: {}".format(type(investigate_id), type(key)))
         if investigate_id in self.mafia:
-            curr_msg = "You visited a naughty fishy"
+            curr_msg = "You find out that {} is a mafia!".format(self.guild.get_member(investigate_id).name)
         else:
-            curr_msg = "You visited a good guy"
+            curr_msg = "You find out that {} is just yo average villager.".format(self.guild.get_member(investigate_id).name)
 
         print("Curr msg: {}".format(curr_msg))
 
@@ -415,12 +416,12 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
         print("Players len: {}".format(len(self.players)))
         if len(self.mafia) >= (len(self.players) / 2):
             await self.day_channels["Town Hall"].send("@here Mafia won!")
-            await self.day_channels["Town Hall"].send(self.get_game_composition_as_string())
+            await self.broadcast_gamecomp()
             time.sleep(15)
             await self.cleanup()        
         elif len(self.mafia) == 0:
             await self.day_channels["Town Hall"].send("@here Villagers won!")
-            await self.day_channels["Town Hall"].send(self.get_game_composition_as_string())
+            await self.broadcast_gamecomp()
             time.sleep(15)
             await self.cleanup()        
     
@@ -433,13 +434,33 @@ Mafia[N]: Acting on someone casts a vote - whoever has the majority vote will be
         player_list += "===================================\n"
         return player_list
 
-    def get_game_composition_as_string(self):
-        game_comp = "==============GAME COMP==============\nn"
+    async def broadcast_gamecomp(self):
+        game_comp = "==============GAME COMP==============\n"
         for player, val in self.game_composition.items():
             curr_str = self.guild.get_member(player).name + ": " + val.name + '\n'
             game_comp += curr_str
         game_comp += "=====================================\n"
-        return game_comp
+        await self.broadcast_message("Town Hall", game_comp)
+    
+    async def broadcast_tolynch(self):
+        to_vote = "Players who haven't voted:\n"
+        for player in self.to_lynch:
+            curr_str = self.guild.get_member(player).name + '\n'
+            to_vote += curr_str
+        if self.time == "Day":
+            await self.broadcast_message("Town Hall", to_vote)
+    
+    async def broadcast_censoredcomp(self):
+        role_count_map = defaultdict(int)
+        game_comp = "==============GAME COMP==============\n"
+        for player, val in self.game_composition.items():
+            role_count_map[self.players[player].name] += 1
+        
+        for role_name, count in role_count_map.items():
+            curr_str = role_name + ": " + str(count) + '\n'
+            game_comp += curr_str
+        game_comp += "=====================================\n"
+        await self.broadcast_message("Town Hall", game_comp)
 
     def get_time(self):
         return self.time
