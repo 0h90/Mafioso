@@ -71,6 +71,7 @@ class MafiaClient(discord.Client):
 ::help - Display this message\n\
 ::act <number\> - Act on <number\> if your role has the ability to act\n\
 ::lynch <number\> - Lynch <number\>\n\
+::abstain - Abstain from lynching. If you already voted - removes your vote\n\
 ::tovote - Get players who have not voted for lynching\n\
 ::gamecomp - Get game composition```")
                 
@@ -107,6 +108,9 @@ class MafiaClient(discord.Client):
 
             elif command == "lynch":
                 await self.narrator.on_lynch(message)
+            
+            elif command == "abstain":
+                await self.narrator.on_abstain(message)
             
             elif command == "tovote":
                 await self.narrator.broadcast_tolynch()

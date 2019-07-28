@@ -213,9 +213,10 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
         await self.update_permissions()
 
         if self.time == "Day":
-            print("BROADCASTING NIGHT MESSAGES")
+            #print("BROADCASTING NIGHT MESSAGES")
             await self.broadcast_night_messages()
-            await self.broadcast_message("Town Hall", self.narrator_message)
+            if len(self.narrator_message) > 0:
+                await self.broadcast_message("Town Hall", self.narrator_message)
             self.narrator_message = ""
             for name, channel in self.day_channels.items():
                 await channel.send(self.get_players_as_indices())
@@ -227,6 +228,9 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
         self.investigate_id = 0
 
     async def update_actset(self):
+        self.to_act = set()
+        self.to_lynch = set()
+        
         if self.time == "Night":
             for player, val in self.players.items():
                 if val.can_act is True and val.act_time == "Night":
@@ -279,6 +283,11 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             self.to_act.remove(player_id)
         
         print("After act: {}".format(self.to_act))
+
+        print("Names:")
+        for name in self.to_act:
+            print("Len: ???? {}".format(len(self.to_act)))
+            print(self.guild.get_member(name).name)
         
         if acting_entity.get_act_time() == "Day":
             await self.day_channels[acting_entity.name].send("Received command from: {}".format(acting_entity.name))
@@ -306,13 +315,28 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
     
         if len(self.to_lynch) == 0:
             await self.finalise(message)
+    
+    async def on_abstain(self, message):
+        if self.time != "Day":
+            return
+        player_id = message.author.id
+
+        if player_id in self.to_lynch:
+            self.to_lynch.remove(message.author.id)
+        elif player_id in self.votes:
+            self.votes.pop(player_id)
+        
+        await self.broadcast_message("Town Hall", "{} is abstaining from voting.".format(self.guild.get_member(player_id).name))
+        await self.broadcast_current_votes()
+
+        if len(self.to_lynch) == 0:
+            await self.finalise(message)
 
     async def finalise(self, message):
         if self.time == "Day":
             player_id = self.get_max_vote() 
             if player_id == -1:
-                await self.day_channels["Town Hall"].send("There is currently a tie! Someone needs to change their vote!")
-                return
+                await self.day_channels["Town Hall"].send("There is currently a tie! No one will die")
             else:
                 await self.on_kill(player_id)
         if self.time == "Night":
@@ -327,7 +351,9 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
 
     async def broadcast_current_votes(self):
         vote_counter = defaultdict(int)
-        print("Current votes: {}".format(self.votes))
+        if len(self.votes) == 0:
+            if self.time == "Day":
+                await self.broadcast_message("Town Hall", "No votes so far")
         for key, val in self.votes.items():
             vote_counter[val] += 1
 
@@ -342,10 +368,13 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             await self.broadcast_message("Mafia", msg)
 
     def get_max_vote(self):
+        if len(self.votes) == 0:
+            return -1
+
         vote_counter = defaultdict(int)
         for key, val in self.votes.items():
             vote_counter[val] += 1
-        
+
         maxv = 0
         player_to_kill = 0
         for key, val in vote_counter.items():
@@ -374,11 +403,10 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             return
         
         if self.time == "Night":
-            currmsg = "{} was found swimming with the fishies!\n".format(self.guild.get_member(player_to_kill).name)
+            await self.broadcast_message("Town Hall", "{} was found swimming with the fishies!\n".format(self.guild.get_member(player_to_kill).name))
         elif self.time == "Day":
-            currmsg = "{} was lynched!".format(self.guild.get_member(player_to_kill).name)
+            await self.broadcast_message("Town Hall", "{} was lynched!".format(self.guild.get_member(player_to_kill).name))
 
-        self.narrator_message += currmsg
         if player_to_kill in self.mafia:
             self.mafia.pop(player_to_kill)
         self.players.pop(player_to_kill)
