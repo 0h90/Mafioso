@@ -146,9 +146,7 @@ class MafiaClient(discord.Client):
                 asyncio.create_task(coroutine())
 
             elif command == "reset":
-                if message.author == self.game_admin:
-                    await self.narrator.broadcast_message("Town Hall", "Cleaning up game")
-                    await self.narrator.cleanup()
+                if message.author == self.game_admin or (self.narrator.is_resettable()):
                     self.game_admin = ""
                     self.being_setup = False
                     self.game_running = False
@@ -157,6 +155,10 @@ class MafiaClient(discord.Client):
                     self.total_players = 0
                     self.participants = []
                     self.get_participants_message = ""
+                    old_narrator = self.narrator
+                    self.narrator = Narrator.Narrator()
+                    await old_narrator.broadcast_message("Town Hall", "Cleaning up game")
+                    await old_narrator.cleanup()
                     self.narrator = Narrator.Narrator()
 
 

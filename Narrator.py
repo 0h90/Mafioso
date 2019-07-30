@@ -25,6 +25,11 @@ class Narrator():
         # Value => Game Class
         self.players = {}
 
+        # Dead players
+        # Key => User ID
+        # Value => Game Class
+        self.dead_players = {}
+
         # Mafia
         # Key => User ID
         # Value => Game Class
@@ -35,9 +40,15 @@ class Narrator():
         # Value => Game Class
         self.villagers = {}
 
-        self.night_channels = {}
+        # Key => Character name
+        # Val => List of channels
+        self.night_channels = defaultdict(list)
 
-        self.day_channels = {}
+        self.day_channels = defaultdict(list)
+
+        # Key => Player id
+        # Val => Channel they belong to
+        self.player_channels = {}
 
         self.dead_channel = 0
 
@@ -46,6 +57,9 @@ class Narrator():
 
         # Same as to act, but for lynching
         self.to_lynch = set()
+
+        # Timer votes
+        self.timers = set()
 
         # Day: Lynch votes
         # Night: Kill votes
@@ -73,6 +87,8 @@ class Narrator():
         # Set to 0 by the timer feature
         self.update_c = 1
 
+        self.resettable = False
+
     # To be called after object instantiation
     # Does all the required async initialisation
     async def create(self, message, role_dictionary, players):
@@ -86,16 +102,16 @@ class Narrator():
                 rand_player = random.randint(0, len(players) - 1)
                 print("{} : {}".format(char_type, message.guild.get_member(players[rand_player])))
                 if char_type == "Doctor":
-                    self.players[players[rand_player]] = Doctor.Doctor()
+                    self.players[players[rand_player]] = Doctor.Doctor(players[rand_player], message.guild.get_member(players[rand_player]).name)
                 elif char_type == "Mafia":
-                    self.players[players[rand_player]] = Mafia.Mafia()
+                    self.players[players[rand_player]] = Mafia.Mafia(players[rand_player], message.guild.get_member(players[rand_player]).name)
                     self.mafia[players[rand_player]] = self.players[players[rand_player]]
                 elif char_type == "Villager":
-                    self.players[players[rand_player]] = Villager.Villager()
+                    self.players[players[rand_player]] = Villager.Villager(players[rand_player], message.guild.get_member(players[rand_player]).name)
                 elif char_type == "Cop":
-                    self.players[players[rand_player]] = Cop.Cop()
+                    self.players[players[rand_player]] = Cop.Cop(players[rand_player], message.guild.get_member(players[rand_player]).name)
                 elif char_type == "TownCrier":
-                    self.players[players[rand_player]] = TownCrier.TownCrier()
+                    self.players[players[rand_player]] = TownCrier.TownCrier(players[rand_player], message.guild.get_member(players[rand_player]).name)
                 players.remove(players[rand_player])
         
         self.game_composition = self.players.copy()
@@ -134,56 +150,26 @@ class Narrator():
 
         dead_perms = base_perms.copy()
         dead_perms[self.roles["Dead"]] = discord.PermissionOverwrite(read_messages=True,send_messages=True)
-
         self.dead_channel = await message.guild.create_text_channel("Dead", overwrites=dead_perms)
 
         for player, val in self.players.items():
+            if val.name == "Mafia":
+                continue
             if val.can_act is True:
-                if val.name == "Mafia":
-                    continue
                 curr_perms = base_perms.copy()
                 curr_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
                 if val.act_time == "Day":
                     curr_perms[self.roles["Day"]] = discord.PermissionOverwrite(send_messages=True)
-                    self.day_channels[val.name] = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
+                    player_channel = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
+                    self.day_channels[val.name].append(player_channel)
                 elif val.act_time == "Night":
                     curr_perms[self.roles["Night"]] = discord.PermissionOverwrite(send_messages=True)
-                    self.night_channels[val.name] = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
+                    player_channel = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
+                    self.night_channels[val.name].append(player_channel)
+                self.player_channels[player] = player_channel
         
-        for name, channel in self.night_channels.items():
-            await channel.send("@here Your assigned role: {}\nYou can act on a player.\nEnter `!act number` (that's an exclamation mark) to act on them.\nFor example, `!act 1` will act on player 1.\nFor a description on what acting on someone does - check out #town-hall.".format(name))
-
-        for name, channel in self.day_channels.items():
-            if name == "Town Hall":
-                continue
-            await channel.send("@here Your assigned role: {}".format(name))
-            if name == "TownCrier":
-                await channel.send("You can act.\nEnter `!act [message]` to have [message] broadcasted ANONYMOUSLY in #town-hall.")
-        
-        help_msg = "``` The aim of the game depends on your alignment. \n \
-Mafia win condition: Have number of alive mafia be greater/equal to number of alive villagers \n \
-Villager win condition: Lynch all mafia\n \``` \
-``` The #town-hall is where the daytime discussion takes place.\n \
-Villagers discuss who the mafia possibly is and vote to lynch them. \n \
-It is locked during the night.\n \
-You will have a dedicated channel for your role. \n \
-No channel means you are a peasant villager. \n \
-During the day, villagers vote to lynch a player using \n \
-!lynch number\n \
-During the night, mafia vote to kill a player using \n \
-!act number\n \
-Other roles, such as a doctor/cop act on a player using \n \
-!act number\n \
-Where 'number' corresponds to the player to be acted on\n \
-Everyone at night must act!``` \
-``` Current Roles: (D/N indicates whether they can act during the [D]ay or [N]ight)\n \
-V/M indicates whether they belong to [V]illagers or [M]afia\n \
-Villager[D/V]: Peasant - can only lynch\n \
-Town Crier[D/V]: Talks shit - Acting anonymously broadcasts message to Town Hall\n \
-Doctor[N/V]: Acting on someone prevents them from being killed by the mafia at night\n \
-Cop[N/V]: Acting on someone reports to the cop the following day about the player's alignment\n \
-Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will be killed by the following day```"
-        await self.broadcast_message("Town Hall", help_msg)
+        for player_id, channel in self.player_channels.items():
+            await channel.send("@{} You are a {}.\n{}".format(self.guild.get_member(player_id).name, self.players[player_id].name, self.players[player_id].whoami()))
         
         await self.update()
 
@@ -200,8 +186,8 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             await self.night_channels[channel].send(message)
 
     async def broadcast_night_messages(self):
-        for channel, msg in self.individual_messages.items():
-            await self.night_channels[channel].send(msg)
+        for player, msg in self.individual_messages.items():
+            await self.player_channels[player].send(msg)
         self.individual_messages = {}
 
     async def update(self):
@@ -226,10 +212,10 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
                 await self.broadcast_message("Town Hall", self.narrator_message)
             self.narrator_message = ""
             for name, channel in self.day_channels.items():
-                await channel.send(self.get_players_as_indices())
+                await self.get_players_as_indices(name)
         elif self.time == "Night":
             for name, channel in self.night_channels.items():
-                await channel.send(self.get_players_as_indices())
+                await self.get_players_as_indices(name)
         
         self.save_id = 0
         self.investigate_id = 0
@@ -331,14 +317,14 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             if player_id == -1:
                 await self.day_channels["Town Hall"].send("There is currently a tie! No one will die")
             else:
-                await self.on_kill(player_id)
+                await self.on_kill(player_id, "Lynch")
         if self.time == "Night":
             player_id = self.get_max_vote() 
             if player_id == -1:
                 await self.night_channels["Mafia"].send("There is currently a tie! Someone needs to change their vote!")
                 return
             else:
-                await self.on_kill(player_id)
+                await self.on_kill(player_id, "Mafia")
 
         await self.update()
 
@@ -384,7 +370,7 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
 
         return player_to_kill
 
-    async def on_kill(self, player_to_kill):
+    async def on_kill(self, player_to_kill, kill_type):
         currmsg = ""
         if self.save_id == player_to_kill:
             self.save_id = 0
@@ -392,19 +378,22 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             self.narrator_message += currmsg
             return
         
-        if self.time == "Night":
-            await self.broadcast_message("Town Hall", "{} was found swimming with the fishies!".format(self.guild.get_member(player_to_kill).name))
-        elif self.time == "Day":
-            await self.broadcast_message("Town Hall", "{} was lynched!".format(self.guild.get_member(player_to_kill).name))
+        if kill_type == "Mafia":
+            await self.broadcast_message("Town Hall", "{}, the {}, was found swimming with the fishies!".format(self.players[player_to_kill].player_name, self.players[player_to_kill].changed_name))
+        elif kill_type == "Lynch":
+            await self.broadcast_message("Town Hall", "{}, the {}, was lynched!".format(self.players[player_to_kill].player_name, self.players[player_to_kill].changed_name))
+        elif kill_type == "Gun":
+            await self.broadcast_message("Town Hall", "{}, the {}, was shot!".format(self.players[player_to_kill].player_name, self.players[player_to_kill].changed_name))
 
         if player_to_kill in self.mafia:
             self.mafia.pop(player_to_kill)
-        self.players.pop(player_to_kill)
 
-        print("Player dying: {}".format(self.guild.get_member(player_to_kill).name))
+        self.dead_players[player_to_kill] = self.players.pop(player_to_kill)
+
+        print("Player dying: {}".format(self.game_composition[player_to_kill].name))
 
         await self.assign_role(player_to_kill, ["Dead"])
-        await self.dead_channel.send("@here Another one has joined the ranks :)")
+        await self.dead_channel.send("@{} You died lul".format(self.guild.get_member(player_to_kill).name))
     
     def add_vote(self, voter, vote):
         self.votes[voter] = vote
@@ -412,7 +401,7 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
     def save(self, save_id):
         self.save_id = save_id
 
-    def investigate(self, investigate_id):
+    def investigate(self, investigator, investigate_id):
         curr_msg = ""
 
         if investigate_id in self.mafia:
@@ -421,40 +410,39 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
             curr_msg = "You find out that {} is just yo average villager.".format(self.guild.get_member(investigate_id).name)
 
         if len(curr_msg) > 0:
-            self.individual_messages["Cop"] = curr_msg
+            self.individual_messages[investigator] = curr_msg
 
     async def cleanup(self):
-        for name, channel in self.day_channels.items():
-            await channel.delete()
-        for name, channel in self.night_channels.items():
+        for player, channel in self.player_channels.items():
             await channel.delete()
         await self.dead_channel.delete()
         for name, role in self.roles.items():
             await role.delete()
     
     async def check_win_condition(self):
-        if len(self.mafia) >= (len(self.players) / 2):
-            await self.day_channels["Town Hall"].send("@here Mafia won!")
-            await self.broadcast_gamecomp()
-            time.sleep(15)
-            #await self.cleanup()        
-            return 1
-        elif len(self.mafia) == 0:
+        if len(self.mafia) == 0:
             await self.day_channels["Town Hall"].send("@here Villagers won!")
             await self.broadcast_gamecomp()
-            time.sleep(15)
-            #await self.cleanup()
+            self.resettable = True
+            return 1
+        elif len(self.mafia) >= (len(self.players) / 2):
+            await self.day_channels["Town Hall"].send("@here Mafia won!")
+            await self.broadcast_gamecomp()
+            self.resettable = True
             return 1
         return 0      
+
+    async def on_player_list(self, message):
+        await self.get_players_as_indices(message.channel)
     
-    def get_players_as_indices(self):
+    async def get_players_as_indices(self, channel_name):
         player_list = "=============PLAYER LIST=============\n"
         for i, (player, val) in enumerate(self.players.items()):
             curr_str = str(i) + ": " + self.guild.get_member(player).name + '\n'
             player_list += curr_str
             self.index_id_map[i] = player
         player_list += "===================================\n"
-        return player_list
+        await self.broadcast_message(channel_name, player_list)
 
     async def broadcast_gamecomp(self):
         game_comp = "==============GAME COMP==============\n"
@@ -492,3 +480,9 @@ Mafia[N/M]: Acting on someone casts a vote - whoever has the majority vote will 
     
     def get_alive_count(self):
         return len(self.players)
+
+    def is_resettable(self):
+        return self.resettable
+    
+    def clear_reset(self):
+        self.resettable = False
