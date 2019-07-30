@@ -7,6 +7,7 @@ class Mafia():
         self.need_await = False
         self.player_id = player_id
         self.player_name = player_name
+        self.last_will = ""
 
     def act(self, narrator, message):
         voter_id = message.author.id
@@ -25,3 +26,9 @@ class Mafia():
             "For example, `!act 0` will vote to kill 0.\n"
         )
         return me_string
+
+    async def broadcast_will(self, narrator):
+        if len(self.last_will) > 0:
+            await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))
+        else:
+            await narrator.broadcast_message("Town Hall", "{} had no last will.".format(self.player_name))

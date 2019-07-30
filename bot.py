@@ -164,6 +164,5 @@ class MafiaClient(discord.Client):
 
 api_file = open("apikey", "r") 
 api_key = api_file.read()
-print(api_key)
 client = MafiaClient()
 client.run(api_key)

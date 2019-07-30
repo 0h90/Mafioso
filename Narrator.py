@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 import random
 from datetime import datetime
+import os
 import Mafia
 import Cop
 import Villager
@@ -96,7 +97,7 @@ class Narrator():
         self.guild = message.guild
 
         ## Generate random players
-        random.seed(datetime.now())
+        random.seed(os.urandom(50))
         for char_type, count in role_dictionary.items():
             for i in range(0, count):
                 rand_player = random.randint(0, len(players) - 1)
@@ -136,7 +137,7 @@ class Narrator():
             #print("Mafia: {}".format(message.guild.get_member(player).name))
             mafia_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
 
-        self.night_channels["Mafia"] = await message.guild.create_text_channel("Mafia", overwrites=mafia_perms)
+        self.night_channels["Mafia"].append(await message.guild.create_text_channel("Mafia", overwrites=mafia_perms))
 
         villager_perms = base_perms.copy()
 
@@ -146,7 +147,7 @@ class Narrator():
         villager_perms[self.roles["Day"]] = discord.PermissionOverwrite(send_messages=True)
         villager_perms[self.roles["Night"]] = discord.PermissionOverwrite(send_messages=False)
 
-        self.day_channels["Town Hall"] = await message.guild.create_text_channel("Town Hall", overwrites=villager_perms)
+        self.day_channels["Town Hall"].append(message.guild.create_text_channel("Town Hall", overwrites=villager_perms))
 
         dead_perms = base_perms.copy()
         dead_perms[self.roles["Dead"]] = discord.PermissionOverwrite(read_messages=True,send_messages=True)
@@ -169,7 +170,7 @@ class Narrator():
                 self.player_channels[player] = player_channel
         
         for player_id, channel in self.player_channels.items():
-            await channel.send("@{} You are a {}.\n{}".format(self.guild.get_member(player_id).name, self.players[player_id].name, self.players[player_id].whoami()))
+            await channel.send("{} You are a {}.\n{}".format(self.guild.get_member(player_id).mention, self.players[player_id].name, self.players[player_id].whoami()))
         
         await self.update()
 
@@ -181,9 +182,9 @@ class Narrator():
     
     async def broadcast_message(self, channel, message):
         if channel in self.day_channels:
-            await self.day_channels[channel].send(message)
+            await (self.day_channels[channel])[0].send(message)
         elif channel in self.night_channels:
-            await self.night_channels[channel].send(message)
+            await (self.night_channels[channel])[0].send(message)
 
     async def broadcast_night_messages(self):
         for player, msg in self.individual_messages.items():
@@ -206,7 +207,6 @@ class Narrator():
         await self.update_permissions()
 
         if self.time == "Day":
-            #print("BROADCASTING NIGHT MESSAGES")
             await self.broadcast_night_messages()
             if len(self.narrator_message) > 0:
                 await self.broadcast_message("Town Hall", self.narrator_message)
@@ -385,6 +385,8 @@ class Narrator():
         elif kill_type == "Gun":
             await self.broadcast_message("Town Hall", "{}, the {}, was shot!".format(self.players[player_to_kill].player_name, self.players[player_to_kill].changed_name))
 
+        await self.players[player_to_kill].broadcast_will(self)
+
         if player_to_kill in self.mafia:
             self.mafia.pop(player_to_kill)
 
@@ -393,7 +395,7 @@ class Narrator():
         print("Player dying: {}".format(self.game_composition[player_to_kill].name))
 
         await self.assign_role(player_to_kill, ["Dead"])
-        await self.dead_channel.send("@{} You died lul".format(self.guild.get_member(player_to_kill).name))
+        await self.dead_channel.send("{} You died lul".format(self.guild.get_member(player_to_kill).mention))
     
     def add_vote(self, voter, vote):
         self.votes[voter] = vote
@@ -405,9 +407,9 @@ class Narrator():
         curr_msg = ""
 
         if investigate_id in self.mafia:
-            curr_msg = "You find out that {} is a mafia!".format(self.guild.get_member(investigate_id).name)
+            curr_msg = "You find out that {} is a mafia!".format(self.players[investigate_id].name)
         else:
-            curr_msg = "You find out that {} is just yo average villager.".format(self.guild.get_member(investigate_id).name)
+            curr_msg = "You find out that {} is just yo average villager.".format(self.players[investigate_id].name)
 
         if len(curr_msg) > 0:
             self.individual_messages[investigator] = curr_msg
@@ -416,6 +418,8 @@ class Narrator():
         for player, channel in self.player_channels.items():
             await channel.delete()
         await self.dead_channel.delete()
+        await self.day_channels["Town Hall"].delete()
+        await self.night_channels["Mafia"].delete()
         for name, role in self.roles.items():
             await role.delete()
     
@@ -462,15 +466,26 @@ class Narrator():
     
     async def broadcast_censoredcomp(self):
         role_count_map = defaultdict(int)
-        game_comp = "==============GAME COMP==============\n"
         for player, val in self.game_composition.items():
             role_count_map[val.name] += 1
         
+        game_comp = "==============GAME COMP==============\n"
         for role_name, count in role_count_map.items():
             curr_str = role_name + ": " + str(count) + '\n'
             game_comp += curr_str
         game_comp += "=====================================\n"
+
+        game_comp += "================DEAD================"
+        for played_id, game_class in self.dead_players.items():
+            curr_str = self.game_composition[played_id].name + ": " + game_class.changed_name + '\n'
+            game_comp += curr_str
+        game_comp += "=====================================\n"
+
         await self.broadcast_message("Town Hall", game_comp)
+    
+    async def lastwill(self, message):
+        player_id = message.author.id
+        self.players[player_id].set_will(self, message)
 
     def get_time(self):
         return self.time

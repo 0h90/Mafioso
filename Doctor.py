@@ -8,6 +8,7 @@ class Doctor():
         self.need_await = False
         self.player_id = player_id 
         self.player_name = player_name
+        self.last_will = ""
     
     def act(self, narrator, message):
         index = int(message.content.split(" ")[1])
@@ -25,3 +26,9 @@ class Doctor():
             "Saving a player prevents them from being killed by the mafia on the same night which you saved them.\n"
         )
         return me_string
+
+    async def broadcast_will(self, narrator):
+        if len(self.last_will) > 0:
+            await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))
+        else:
+            await narrator.broadcast_message("Town Hall", "{} had no last will.".format(self.player_name))
