@@ -27,6 +27,9 @@ class Cop():
         )
         return me_string
 
+    def set_will(self, message):
+        self.last_will = " ".join(message.content.split(" ")[1: ])
+
     async def broadcast_will(self, narrator):
         if len(self.last_will) > 0:
             await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))

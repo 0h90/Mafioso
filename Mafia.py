@@ -1,6 +1,7 @@
 class Mafia():
     def __init__(self, player_id, player_name):
         self.name = "Mafia"
+        self.changed_name = self.name
         self.can_act = True
         self.act_time = "Night"
         self.alignment = "Mafia"
@@ -24,8 +25,13 @@ class Mafia():
         me_string = (
             "Type `!act <number>` to vote to kill <number>.\n"
             "For example, `!act 0` will vote to kill 0.\n"
+            "A majority vote is required to kill someone.\n"
+            "All mafia `must` vote.\n"
         )
         return me_string
+
+    def set_will(self, message):
+        self.last_will = " ".join(message.content.split(" ")[1: ])
 
     async def broadcast_will(self, narrator):
         if len(self.last_will) > 0:

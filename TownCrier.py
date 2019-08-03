@@ -19,7 +19,7 @@ class TownCrier:
     def whoami(self):
         me_string = (
             "Type `!act <msg>` to have <msg> anonymously broadcasted in #town-hall.\n"
-            "For example, `!act hi` will broadcast `Town Crier: Hi` to #town-hall.\n"
+            "For example, `!act hi` will broadcast `Town Crier: hi` to #town-hall.\n"
         )
         return me_string
     

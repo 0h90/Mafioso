@@ -16,8 +16,11 @@ class Villager():
     def get_act_time(self):
         return self.act_time
 
+    def set_will(self, message):
+        self.last_will = " ".join(message.content.split(" ")[1: ])
+
     async def broadcast_will(self, narrator):
         if len(self.last_will) > 0:
-            await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))
+            await narrator.broadcast_message("townhall", "{}'s last will: {}".format(self.player_name, self.last_will))
         else:
-            await narrator.broadcast_message("Town Hall", "{} had no last will.".format(self.player_name))
+            await narrator.broadcast_message("town", "{} had no last will.".format(self.player_name))

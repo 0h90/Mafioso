@@ -68,16 +68,19 @@ class MafiaClient(discord.Client):
                 self.messages[curr_msg.id] = current_type
             
             if command == "help":
-                await message.channel.send("```!init - Initialise game players\n\
-!start - Start game after initialisation\n\
-!reset - Reset everything\n\
-!help - Display this message\n\
-!act <number> - Act on <number\> if your role has the ability to act\n\
-!lynch <number> - Lynch <number\>\n\
-!abstain - Abstain from lynching. If you already voted - removes your vote\n\
-!tovote - Get players who have not voted for lynching\n\
-!timer - Force a lynch in 1 minute\n\
-!gamecomp - Get game composition```")
+                help_msg = (
+                    "`!init` - Initialise and set game players,\n"
+                    "`!start` - Call after !init. Starts the game.\n"
+                    "`!help` - Display this message.\n"
+                    "`!act <number>` - Act on <number\> if your role has the ability to `!act`.\n"
+                    "`!abstain` - Abstain from lynching. If you already voted - removes your vote.\n"
+                    "`!tovote` - Gets players who have not voted for lynching.\n"
+                    "`!timer` - Vote to start a timer which forces a lynch in 1 minute.\n"
+                    "`!gamecomp` - List dead players and the game composition.\n"
+                    "`!list` - Lists players and their act numbers.\n"
+                    "`!lastwill <message>` - Adds <message\> as your lastwill, to be displayed on death.\n"
+                )
+                await message.channel.send(help_msg)
                 
             if command == "init":
                 if self.game_running is True:
@@ -121,6 +124,12 @@ class MafiaClient(discord.Client):
             
             elif command == "gamecomp":
                 await self.narrator.broadcast_censoredcomp()
+            
+            elif command == "list":
+                await self.narrator.on_player_list(message)
+            
+            elif command == "lastwill":
+                await self.narrator.on_lastwill(message)
 
             elif command == "timer":
                 async def coroutine():
@@ -157,7 +166,6 @@ class MafiaClient(discord.Client):
                     self.get_participants_message = ""
                     old_narrator = self.narrator
                     self.narrator = Narrator.Narrator()
-                    await old_narrator.broadcast_message("Town Hall", "Cleaning up game")
                     await old_narrator.cleanup()
                     self.narrator = Narrator.Narrator()
 
