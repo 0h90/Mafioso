@@ -424,7 +424,7 @@ class Narrator():
         if investigate_id in self.mafia:
             curr_msg = "You find out that {} is a mafia!".format(self.players[investigate_id].player_name)
         else:
-            curr_msg = "You find out that {} is just yo average villager.".format(self.players[investigate_id].name)
+            curr_msg = "You find out that {} is just yo average villager.".format(self.players[investigate_id].player_name)
 
         if len(curr_msg) > 0:
             self.individual_messages[investigator] = curr_msg
