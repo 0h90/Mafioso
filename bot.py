@@ -69,10 +69,13 @@ class MafiaClient(discord.Client):
             
             if command == "help":
                 help_msg = (
+                    "[*] Misc\n"
                     "`!init` - Initialise and set game players,\n"
                     "`!start` - Call after !init. Starts the game.\n"
                     "`!help` - Display this message.\n"
+                    "[*] Gameplay \n"
                     "`!act <number>` - Act on <number\> if your role has the ability to `!act`.\n"
+                    "`!lynch <number>` - Vote to lynch a player.\n"
                     "`!abstain` - Abstain from lynching. If you already voted - removes your vote.\n"
                     "`!tovote` - Gets players who have not voted for lynching.\n"
                     "`!timer` - Vote to start a timer which forces a lynch in 1 minute.\n"
