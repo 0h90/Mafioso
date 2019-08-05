@@ -42,6 +42,7 @@ class InteractionManager():
                 self.channel_manager.broadcast_villager_message("@here Tie when voting. No one will die.")
             elif self.game_time == "Night":"
                 self.channel_manager.broadcast_mafia_message("@here Tie when voting.")
+                return
         else:
             await self.try_kill(player_to_kill)
                 
