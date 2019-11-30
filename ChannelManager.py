@@ -6,11 +6,6 @@ from collections import defaultdict
 import random
 from datetime import datetime
 import os
-import Mafia
-import Cop
-import Villager
-import Doctor
-import TownCrier
 
 class PlayerChannels():
     def __init__(self, act_channel, last_will_channel):
@@ -19,7 +14,7 @@ class PlayerChannels():
         self.item_channels = []
 
 class ChannelManager():
-    def __init__(self):
+    def __init__(self, guild):
         # Original game composition
         # Key => Unique user id
         # Value => Role class
@@ -66,6 +61,8 @@ class ChannelManager():
         self.player_channels = {}
     
         self.interaction_manager = InteractionManager()
+
+        self.guild = guild
 
     def create(self, message, role_dictionary, players_list):
         ## Generate random players_list
