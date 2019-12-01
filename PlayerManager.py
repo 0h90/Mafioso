@@ -38,6 +38,10 @@ class PlayerManager():
         # Map of player ids (dead) to character object
         self.dead_players = {}
 
+        # Map of player ids to mafia objects
+        self.mafia_map = {}
+
+        # Message manager object
         self.message_manager = None
 
 
@@ -45,10 +49,10 @@ class PlayerManager():
         self.message_manager = message_manager
 
     def assign_characters_to_players(self):
-        ## Generate random players
+        # Generate random players
         copied_player_set = self.player_set.copy()
         guild = self.message_manager.get_guild()
-        random.seed(os.urandom(21034700))
+        random.seed(os.urandom(1028))
 
         for char_type, count in self.character_map.items():
             for i in range(0, count):
@@ -58,7 +62,7 @@ class PlayerManager():
                     self.player_map[rand_player] = Doctor.Doctor(rand_player, guild.get_member(rand_player).name)
                 elif char_type == "Mafia":
                     self.player_map[rand_player] = Mafia.Mafia(rand_player, guild.get_member(rand_player).name)
-                    self.mafia[rand_player] = self.player_map[rand_player]
+                    self.mafia_map[rand_player] = self.player_map[rand_player]
                 elif char_type == "Villager":
                     self.player_map[rand_player] = Villager.Villager(rand_player, guild.get_member(rand_player).name)
                 elif char_type == "Cop":
@@ -98,6 +102,9 @@ class PlayerManager():
     def get_player_count(self):
         return len(self.player_set)
     
+    def get_player_map(self):
+        return self.player_map
+
     def get_character_set(self):
         return self.character_set
     

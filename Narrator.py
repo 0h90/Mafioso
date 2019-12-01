@@ -6,11 +6,6 @@ from collections import defaultdict
 import random
 from datetime import datetime
 import os
-import Mafia
-import Cop
-import Villager
-import Doctor
-import TownCrier
 
 class Narrator():
     def __init__(self):
@@ -90,32 +85,30 @@ class Narrator():
 
         self.resettable = False
 
+        self.message_manager = None
+        
+        self.player_manager = None
+
+        self.channel_manager = None
+
+        self.interaction_manager = None
+
     # To be called after object instantiation
     # Does all the required async initialisation
-    async def create(self, message, role_dictionary, players):
-        # Set guild
-        self.guild = message.guild
+    async def create(
+        self,
+        message_manager,
+        player_manager,
+        channel_manager,
+        interaction_manager
+    ):
+        self.message_manager = message_manager
+        self.player_manager = player_manager
+        self.channel_manager = channel_manager
+        self.interaction_manager = interaction_manager
 
-        ## Generate random players
-        random.seed(os.urandom(200))
-        for char_type, count in role_dictionary.items():
-            for i in range(0, count):
-                rand_player = random.randint(0, len(players) - 1)
-                print("{} : {}".format(char_type, message.guild.get_member(players[rand_player])))
-                if char_type == "Doctor":
-                    self.players[players[rand_player]] = Doctor.Doctor(players[rand_player], message.guild.get_member(players[rand_player]).name)
-                elif char_type == "Mafia":
-                    self.players[players[rand_player]] = Mafia.Mafia(players[rand_player], message.guild.get_member(players[rand_player]).name)
-                    self.mafia[players[rand_player]] = self.players[players[rand_player]]
-                elif char_type == "Villager":
-                    self.players[players[rand_player]] = Villager.Villager(players[rand_player], message.guild.get_member(players[rand_player]).name)
-                elif char_type == "Cop":
-                    self.players[players[rand_player]] = Cop.Cop(players[rand_player], message.guild.get_member(players[rand_player]).name)
-                elif char_type == "TownCrier":
-                    self.players[players[rand_player]] = TownCrier.TownCrier(players[rand_player], message.guild.get_member(players[rand_player]).name)
-                players.remove(players[rand_player])
-        
-        self.game_composition = self.players.copy()
+        # Set guild
+        self.guild = message_manager.get_guild()
 
         # Create roles
         self.roles["Dead"] = await message.guild.create_role(name="Dead")

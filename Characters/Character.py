@@ -11,6 +11,7 @@ class Role(ABC):
         self.can_vote = True
         self.alignment = "Villager"
         self.last_will = ""
+        self.act_alone = True
 
     def set_will(self, message):
         self.last_will = " ".join(message.content.split(" ")[1: ])

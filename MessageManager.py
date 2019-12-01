@@ -193,11 +193,13 @@ class MessageManager():
                     status = self.player_manager.try_inc_char_count(msg_info)
                     if status is False:
                         await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
+                        return
 
                 elif (str(reaction.emoji) == "⬆"):
                     status = self.player_manager.try_dec_char_count(msg_info)
                     if status is False:
                         await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
+                        return
 
                 edited_message = " ".join(reaction.message.content.split(" ")[:2]) + " " + str(self.player_manager.get_char_count(msg_info))
                 await reaction.message.edit(content=edited_message)
