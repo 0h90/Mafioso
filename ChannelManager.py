@@ -22,45 +22,30 @@ class RoleEnums(Enum):
     
 class ChannelManager():
     def __init__(self):
-        # Dictionary of channels
+        # Dictionary of non-private channels
         # Key -> String, Channel name
         # Val -> Channel obj
         self.channels = {}
 
-        # alive players_list map
-        # Key => Unique user id
-        # Value => Role class
-        self.alive_players = {}
+        # Dictionary of private role channels
+        # Key -> Int, Player Id
+        # Val -> Channel obj, Private role channel
+        self.private_role_channels = {}
 
-        # dead players_list map
-        # Key => Unique user id
-        # Value => Role class
-        self.dead_players = {}
-    
-        # alive mafia
-        # Key => Unique user id
-        # Value => Role class
-        self.mafia = {}
-    
+        # Dictionary of last will channels
+        # Key -> Int, Player Id
+        # Val -> Channel obj, Private last will channel
+        self.last_will_channels = {}
+
+        # Dictionary of lists of special channels
+        # Key -> Int, Plyaer Id
+        # Val -> List of Channel objs, Special channels for to-be-created roles...
+        self.special_channels = {}
+
         # Roles map
         # Key => Role name
         # Value => Discord.Role object
         self.roles = {}
-
-        # The villager channel
-        # Where all the announcements go
-        self.villager_channel = 0
-
-        # The mafia channel
-        self.mafia_channel = 0
-
-        # Where the dead people talk
-        self.dead_channel = 0
-
-        # Individual player channels
-        # Key => Unique user id
-        # Value => PlayerChannels() class
-        self.player_channels = {}
 
         self.message_manager = None
 
@@ -100,16 +85,13 @@ class ChannelManager():
         # Create invidiual channels for acting roles
         for player_id, character_obj in self.player_manager.get_player_map().items():
             if character_obj.act_alone is True:
-                self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, character_obj.act_times)
+                self.private_role_channels[player_id].append(self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, character_obj.act_times))
             else:
-                self.create_group_channel(character_obj.role_name, base_perms.copy(), character_obj.act_times)
+                self.channels[character_obj.role_name] = self.create_group_channel(character_obj.role_name, base_perms.copy(), character_obj.act_times)
         
         # Create last will channel
         for player_id in self.player_manager.get_player_set():
-            self.create_private_channel("last-will", base_perms.copy(), player_id, [RoleEnums.NIGHT])
-
-        # TODO: Member dictionary which contains a list of channels associated with a player_id
-        self.player_channels[player_id] = PlayerChannels(last_will_channel, act_channel)
+            self.last_will_channels[player_id].append(self.create_private_channel("last-will", base_perms.copy(), player_id, [RoleEnums.NIGHT]))
                     
         # TODO: MessageManager needs to broadcast this
         for player_id, player_chans in self.player_channels.items():

@@ -27,6 +27,15 @@ class PlayerManager():
         # Val -> Int, Count 
         self.character_map = defaultdict(int)
 
+        # Character info
+        self.character_info = {
+            "Mafia" : Mafia.whoami(),
+            "Doctor" : Doctor.whoami(),
+            "Villager" : Villager.whoami(),
+            "TownCrier" : TownCrier.whoami(),
+            "Cop" : Cop.whoami()
+        }
+
         self.total_character_count = 0
 
         # Map of player ids to character object
@@ -125,3 +134,12 @@ class PlayerManager():
 
     def get_dead(self):
         return self.dead_players
+    
+    # Retrieve the character object by role name
+    # Useful for situations where you do not care which player the character is binded to
+    # Such as retriveving whoami() info
+    # Should I just make whoami() static...
+    def get_character_obj_by_rolename(self, role_name):
+        for player_id, character_obj in self.player_map.items():
+            if role_name == character_obj.role_name:
+                return character_obj

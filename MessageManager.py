@@ -195,7 +195,7 @@ class MessageManager():
                         await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
                         return
 
-                elif (str(reaction.emoji) == "⬆"):
+                elif str(reaction.emoji) == "⬇":
                     status = self.player_manager.try_dec_char_count(msg_info)
                     if status is False:
                         await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
@@ -216,6 +216,16 @@ class MessageManager():
         self.key_messages[curr_msg.id] = ("init", curr_msg)
         await curr_msg.add_reaction("✅")
         await curr_msg.add_reaction("🟢")
+    
+    async def send_welcome_message(self, group_channels, private_channels):
+        for channel_name, channel_obj in group_channels.items():
+            if channel_name == "villager-discussion":
+                channel_obj.send("Welcome! This is where all the day-time discussion goes. Have fun!")
+            elif channel_name == "dead":
+                channel_obj.send("You are dead. You can spectate all the other channels. Don't leak information please.")
+            else:
+                channel_obj.send("Hi @here. You are `{}`. {}".format(channel_name, ))
+        
 
     def get_guild(self):
         return self.guild

@@ -19,14 +19,6 @@ class Cop():
     def get_act_time(self):
         return self.act_time
 
-    def whoami(self):
-        me_string = (
-            "Type `!act <number>` to investigate a player.\n"
-            "For example, `!act 0` will investigate player 0.\n"
-            "Investigating a player reports if they are good or bad the next day.\n"
-        )
-        return me_string
-
     def set_will(self, message):
         self.last_will = " ".join(message.content.split(" ")[1: ])
 
@@ -35,3 +27,10 @@ class Cop():
             await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))
         else:
             await narrator.broadcast_message("Town Hall", "{} had no last will.".format(self.player_name))
+
+def whoami():
+    me_string = (
+        "`Description`: You are a `Cop`! You investigate players. Investigating players reveals their alignment to you on the next morning.\n"
+        "`Win Condition`: Lynch all `Mafia`\n"
+    )
+    return me_string

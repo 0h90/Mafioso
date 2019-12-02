@@ -16,13 +16,6 @@ class TownCrier:
     def get_act_time(self):
         return self.act_time
     
-    def whoami(self):
-        me_string = (
-            "Type `!act <msg>` to have <msg> anonymously broadcasted in #town-hall.\n"
-            "For example, `!act hi` will broadcast `Town Crier: hi` to #town-hall.\n"
-        )
-        return me_string
-    
     def set_will(self, message):
         self.last_will = " ".join(message.content.split(" ")[1: ])
     
@@ -31,3 +24,10 @@ class TownCrier:
             await narrator.broadcast_message("Town Hall", "{}'s last will: {}".format(self.player_name, self.last_will))
         else:
             await narrator.broadcast_message("Town Hall", "{} had no last will.".format(self.player_name))
+
+def whoami():
+    me_string = (
+        "`Description`: You are a `Town Crier`! You can broadcast messages anonymously to the town discussion.\n"
+        "`Win Condition`: Lynch all `Mafia`.\n"
+    )
+    return me_string

@@ -7,7 +7,7 @@ class Role(ABC):
         self.role_name = ""
         self.changed_role_name = ""
         self.can_act = ""
-        self.act_time = ""
+        self.act_times = []
         self.can_vote = True
         self.alignment = "Villager"
         self.last_will = ""
@@ -21,8 +21,4 @@ class Role(ABC):
     
     @abstractmethod
     def act(self, narrator, message):
-        return NotImplemented
-    
-    @abstractmethod
-    def whoami(self):
         return NotImplemented
