@@ -135,11 +135,5 @@ class PlayerManager():
     def get_dead(self):
         return self.dead_players
     
-    # Retrieve the character object by role name
-    # Useful for situations where you do not care which player the character is binded to
-    # Such as retriveving whoami() info
-    # Should I just make whoami() static...
-    def get_character_obj_by_rolename(self, role_name):
-        for player_id, character_obj in self.player_map.items():
-            if role_name == character_obj.role_name:
-                return character_obj
+    def get_character_info(self, character):
+        return self.character_info[character]

@@ -1,4 +1,3 @@
-from . import Character
 from . import Doctor
 from . import Villager
 from . import TownCrier

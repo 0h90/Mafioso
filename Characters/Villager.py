@@ -10,21 +10,6 @@ class Villager():
         self.player_name = player_name
         self.last_will = ""
     
-    def act(self, narrator, message):
-        return -1
-    
-    def get_act_times(self):
-        return self.act_times
-
-    def set_will(self, message):
-        self.last_will = " ".join(message.content.split(" ")[1: ])
-
-    async def broadcast_will(self, narrator):
-        if len(self.last_will) > 0:
-            await narrator.broadcast_message("townhall", "{}'s last will: {}".format(self.player_name, self.last_will))
-        else:
-            await narrator.broadcast_message("town", "{} had no last will.".format(self.player_name))
-
 def whoami():
     me_string = (
         "`Description`: You are a villager. You try to off the rat mafia hiding amongst you.\n"

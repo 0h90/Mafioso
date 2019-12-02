@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class Role(ABC):
+class Character(ABC):
     def __init__(self):
         self.player_id = 0
         self.player_name = ""
@@ -19,6 +19,5 @@ class Role(ABC):
     def get_will(self):
         return self.last_will
     
-    @abstractmethod
-    def act(self, narrator, message):
-        return NotImplemented
+    def get_act_times(self):
+        return self.act_times
