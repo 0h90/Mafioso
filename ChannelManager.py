@@ -22,10 +22,15 @@ class RoleEnums(Enum):
     
 class ChannelManager():
     def __init__(self):
-        # Dictionary of non-private channels
+        # Dictionary of town-discussion and dead channels
         # Key -> String, Channel name
         # Val -> Channel obj
-        self.channels = {}
+        self.other_channels = {}
+
+        # Dictionary of group role channels
+        # Key -> String, Character group: Mafia...
+        # Val -> Channel obj
+        self.group_role_channels = {}
 
         # Dictionary of private role channels
         # Key -> Int, Player Id
@@ -78,26 +83,23 @@ class ChannelManager():
         base_perms = { self.guild.default_role : discord.PermissionOverwrite(read_messages=False,send_messages=False) }
         base_perms[self.roles[RoleEnums.DEAD]] = discord.PermissionOverwrite(read_messages=True)
         
-        self.channels["mafia"] = self.create_group_channel("mafia", base_perms.copy(), [RoleEnums.NIGHT])
-        self.channels["villager-discussion"] = self.create_public_channel("villager-discussion", base_perms.copy(), [RoleEnums.DAY])
-        self.channels["dead"] = self.create_roles_channel("dead", base_perms.copy(), [RoleEnums.DEAD], [RoleEnums.DEAD])
+        self.group_role_channels["mafia"] = self.create_group_channel("mafia", base_perms.copy(), [RoleEnums.NIGHT])
+        self.other_channels["villager-discussion"] = self.create_public_channel("villager-discussion", base_perms.copy(), [RoleEnums.DAY])
+        self.other_channels["dead"] = self.create_roles_channel("dead", base_perms.copy(), [RoleEnums.DEAD], [RoleEnums.DEAD])
 
         # Create invidiual channels for acting roles
         for player_id, character_obj in self.player_manager.get_player_map().items():
             if character_obj.act_alone is True:
                 self.private_role_channels[player_id].append(self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, character_obj.act_times))
             else:
-                self.channels[character_obj.role_name] = self.create_group_channel(character_obj.role_name, base_perms.copy(), character_obj.act_times)
+                self.group_role_channels[character_obj.role_name] = self.create_group_channel(character_obj.role_name, base_perms.copy(), character_obj.act_times)
         
         # Create last will channel
         for player_id in self.player_manager.get_player_set():
             self.last_will_channels[player_id].append(self.create_private_channel("last-will", base_perms.copy(), player_id, [RoleEnums.NIGHT]))
-                    
-        # TODO: MessageManager needs to broadcast this
-        for player_id, player_chans in self.player_channels.items():
-            if player_chans.act_channel != 0:
-                await player_chans.act_channel.send("{} You are a {}.\n{}".format(self.guild.get_member(player_id).mention, self.game_comp[player_id].role_name, self.game_comp[player_id].whoami()))
-    
+        
+        message_manager.send_welcome_message(self.other_channels, self.group_role_channels, self.private_role_channels)
+
     async def create_role(self, role_name):
         self.roles[role_name] = await self.guild.create_role(name=role_name)
 
@@ -142,23 +144,18 @@ class ChannelManager():
             overwrite_perms[self.roles[role]] = discord.PermissionOverwrite(send_messages=True)
 
         return await self.guild.create_text_channel(channel_name, overwrites=overwrite_perms)
-    
-    async def broadcast_voter_message(self, game_time, message):
-        if game_time == "Day":
-            self.broadcast_villager_message(message)
-        elif game_time == "night":
-            self.broadcast_mafia_message(message)
 
-    async def broadcast_mafia_message(self, message):
-        await self.mafia_channel.send(message)
+    # Gets a channel by name
+    # Only searches through other_channels and group_roles_channels    
+    def get_channel_by_name(self, channel_name):
+        for name, channel_obj in self.other_channels.items():
+            if channel_name == name:
+                return channel_obj 
+        
+        for name, channel_obj in self.group_role_channels.items():
+            if channel_name == name:
+                return channel_obj
 
-    async def broadcast_villager_message(self, message):
-        await self.villager_channel.send(message)
-
-    async def broadcast_individual_messages(self, individual_messages):
-        for player_id, message in individual_messages.items():
-            await self.player_channels[player_id].act_channel.send(message)
-    
     async def update_single_permissions(self, player_id, new_roles):
         member = self.player_to_member[player_id]
         member_roles = member.roles()

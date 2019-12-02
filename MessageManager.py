@@ -168,12 +168,10 @@ class MessageManager():
             return
 
         if msg_info == "info":
-
             if reaction.emoji == "✅":
                 if player_id not in self.player_manager.get_player_set() and player_id != self.self_id:
                     self.player_manager.add_player(player_id)
                     await msg.edit(content="Current Participants: {}".format(len(self.participants))) 
-
             elif reaction.emoji == "🟢":
                 if self.admin_check(player_id):
                     self.game_state = GameState.STARTED
@@ -185,16 +183,13 @@ class MessageManager():
                     await self.init_channel.send(msg)
                     await self.narrator.create(message, self.characters, self.participants)
                     
-
         elif msg_info in self.player_manager.get_character_set():
             if self.admin_check(player_id):
-
                 if str(reaction.emoji) == "⬆":
                     status = self.player_manager.try_inc_char_count(msg_info)
                     if status is False:
                         await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
                         return
-
                 elif str(reaction.emoji) == "⬇":
                     status = self.player_manager.try_dec_char_count(msg_info)
                     if status is False:
@@ -217,15 +212,19 @@ class MessageManager():
         await curr_msg.add_reaction("✅")
         await curr_msg.add_reaction("🟢")
     
-    async def send_welcome_message(self, group_channels, private_channels):
-        for channel_name, channel_obj in group_channels.items():
+    # TODO: Make argument-less. Just use the reference to ChannelManager
+    async def send_welcome_message(self, other_channels, group_channels, private_channels):
+        for channel_name, channel_obj in other_channels.items():
             if channel_name == "villager-discussion":
                 channel_obj.send("Welcome! This is where all the day-time discussion goes. Have fun!")
             elif channel_name == "dead":
                 channel_obj.send("You are dead. You can spectate all the other channels. Don't leak information please.")
-            else:
-                channel_obj.send("Hi @here. You are `{}`. {}".format(channel_name, ))
+
+        for channel_name, channel_obj in group_channels.items():
+            channel_obj.send("Hi @here. You are `{}`.\n{}".format(channel_name, self.player_manager.get_character_info(channel_name)))
         
+        for player_id, channel_obj in private_channels.items():
+            channel_obj.send("Hi {}. You are a `{}`.\n{}".format(self.guild.get_member(player_id).mention(), channel_obj.name, self.player_manager.get_character_info(channel_obj.name)))
 
     def get_guild(self):
         return self.guild
