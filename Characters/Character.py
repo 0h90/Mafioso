@@ -6,7 +6,6 @@ class Character(ABC):
         self.player_name = ""
         self.role_name = ""
         self.changed_role_name = ""
-        self.can_act = ""
         self.act_times = []
         self.can_vote = True
         self.alignment = "Villager"
@@ -21,3 +20,6 @@ class Character(ABC):
     
     def get_act_times(self):
         return self.act_times
+    
+    def can_act(self):
+        return (len(self.act_times) > 0)

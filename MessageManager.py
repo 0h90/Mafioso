@@ -226,5 +226,9 @@ class MessageManager():
         for player_id, channel_obj in private_channels.items():
             channel_obj.send("Hi {}. You are a `{}`.\n{}".format(self.guild.get_member(player_id).mention(), channel_obj.name, self.player_manager.get_character_info(channel_obj.name)))
 
+    async def send_private_key_message(self):
+        for player_id in self.player_manager.get_alive(): 
+        for channel_name, channel_obj in self.channel_manager.get_private_role_channels().items():
+            
     def get_guild(self):
         return self.guild

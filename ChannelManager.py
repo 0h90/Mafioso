@@ -47,6 +47,10 @@ class ChannelManager():
         # Val -> List of Channel objs, Special channels for to-be-created roles...
         self.special_channels = {}
 
+        # Dummy channels. Roles which don't act.
+        # AKA villagers.
+        self.dummy_channels = {}
+
         # Roles map
         # Key => Role name
         # Value => Discord.Role object
@@ -83,20 +87,22 @@ class ChannelManager():
         base_perms = { self.guild.default_role : discord.PermissionOverwrite(read_messages=False,send_messages=False) }
         base_perms[self.roles[RoleEnums.DEAD]] = discord.PermissionOverwrite(read_messages=True)
         
-        self.group_role_channels["mafia"] = self.create_group_channel("mafia", base_perms.copy(), [RoleEnums.NIGHT])
         self.other_channels["villager-discussion"] = self.create_public_channel("villager-discussion", base_perms.copy(), [RoleEnums.DAY])
         self.other_channels["dead"] = self.create_roles_channel("dead", base_perms.copy(), [RoleEnums.DEAD], [RoleEnums.DEAD])
 
         # Create invidiual channels for acting roles
         for player_id, character_obj in self.player_manager.get_player_map().items():
-            if character_obj.act_alone is True:
-                self.private_role_channels[player_id].append(self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, character_obj.act_times))
+            if character_obj.act_alone:
+                if character_obj.can_act():
+                    self.private_role_channels[player_id] = self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, character_obj.act_times)
+                else:
+                    self.dummy_channels[player_id] = self.create_private_channel(character_obj.role_name, base_perms.copy(), player_id, [])
             else:
                 self.group_role_channels[character_obj.role_name] = self.create_group_channel(character_obj.role_name, base_perms.copy(), character_obj.act_times)
         
         # Create last will channel
         for player_id in self.player_manager.get_player_set():
-            self.last_will_channels[player_id].append(self.create_private_channel("last-will", base_perms.copy(), player_id, [RoleEnums.NIGHT]))
+            self.last_will_channels[player_id] = self.create_private_channel("last-will", base_perms.copy(), player_id, [RoleEnums.NIGHT])
         
         message_manager.send_welcome_message(self.other_channels, self.group_role_channels, self.private_role_channels)
 
@@ -155,6 +161,12 @@ class ChannelManager():
         for name, channel_obj in self.group_role_channels.items():
             if channel_name == name:
                 return channel_obj
+    
+    def get_group_role_channels(self):
+        return self.group_role_channels
+
+    def get_private_role_channels(self):
+        return self.private_role_channels
 
     async def update_single_permissions(self, player_id, new_roles):
         member = self.player_to_member[player_id]
