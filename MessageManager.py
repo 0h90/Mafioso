@@ -207,6 +207,11 @@ class MessageManager():
         await curr_msg.add_reaction("⬇")
 
     async def send_init_key_message(self):
+        init_help_msg = (
+            ":white_check_mark: : Join game\n"
+            ":green_circle: : Start game\n")
+        await self.init_channel.send(init_help_msg)
+
         curr_msg = await self.init_channel.send("Current Participants: {}".format(len(self.participants)))
         self.key_messages[curr_msg.id] = ("init", curr_msg)
         await curr_msg.add_reaction("✅")
@@ -227,8 +232,40 @@ class MessageManager():
             channel_obj.send("Hi {}. You are a `{}`.\n{}".format(self.guild.get_member(player_id).mention(), channel_obj.name, self.player_manager.get_character_info(channel_obj.name)))
 
     async def send_private_key_message(self):
-        for player_id in self.player_manager.get_alive(): 
-        for channel_name, channel_obj in self.channel_manager.get_private_role_channels().items():
-            
+        emoji_map = self.player_manager.get_alive_emoji_map()
+
+        msg = "`Act Pane`\n"
+        for player_id, emoji_name in emoji_map.items():
+            msg += "{}: {}\n".format(emoji_name, self.guild.get_member(player_id).name)
+
+        unicode_mappings = self.player_manager.get_emoji_unicode_map()
+        # TODO: Experiment with adding multiple reactions to a message obj
+        # and just sending that
+        for _, channel_obj in self.channel_manager.get_private_role_channels().items():
+            msg_obj = channel_obj.send(msg)
+            for _, emoji_name in emoji_map.items():
+                msg_obj.add_reaction(unicode_mappings[emoji_name])
+
+            # Store the msg obj in key_messages
+            self.key_messages[msg_obj.id] = ("act", msg_obj)
+    
+    async def send_lynch_key_message(self):
+        emoji_map = self.player_manager.get_alive_emoji_map()
+
+        msg = "`Lynch Pane`\n"
+        for player_id, emoji_name in emoji_map.items():
+            msg += "{}: {}\n".format(emoji_name, self.guild.get_member(player_id).name)
+        
+        unicode_mappings = self.player_manager.get_emoji_unicode_map()
+        channel_obj = self.channel_manager.get_channel_by_name("lynch-pane")
+        msg_obj = channel_obj.send(msg)
+
+        for _, emoji_name in emoji_map.items():
+            msg_obj.add_reaction(unicode_mappings[emoji_name])
+
+        self.key_messages[msg_obj.id] = ("lynch", msg_obj)
+    
+    async def send_public_message(self, message):
+
     def get_guild(self):
         return self.guild

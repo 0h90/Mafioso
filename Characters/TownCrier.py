@@ -1,7 +1,7 @@
 from . import Character
 
 class TownCrier(Character.Character):
-    def __init__(self, player_id, player_name):
+    def __init__(self, player_id, player_name, emoji):
         self.name = "TownCrier"
         self.changed_name = self.name
         self.can_act = True
@@ -11,6 +11,7 @@ class TownCrier(Character.Character):
         self.player_id = player_id
         self.player_name = player_name
         self.last_will = ""
+        self.emoji = emoji
 
 def whoami():
     me_string = (

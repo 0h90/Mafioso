@@ -88,6 +88,7 @@ class ChannelManager():
         base_perms[self.roles[RoleEnums.DEAD]] = discord.PermissionOverwrite(read_messages=True)
         
         self.other_channels["villager-discussion"] = self.create_public_channel("villager-discussion", base_perms.copy(), [RoleEnums.DAY])
+        self.other_channels["lynch-pane"] = self.create_public_channel("lynch-pane", base_perms.copy(), [])
         self.other_channels["dead"] = self.create_roles_channel("dead", base_perms.copy(), [RoleEnums.DEAD], [RoleEnums.DEAD])
 
         # Create invidiual channels for acting roles

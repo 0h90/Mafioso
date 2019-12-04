@@ -11,6 +11,10 @@ class Character(ABC):
         self.alignment = "Villager"
         self.last_will = ""
         self.act_alone = True
+        self.emoji = 0
+
+    def get_emoji(self):
+        return self.emoji
 
     def set_will(self, message):
         self.last_will = " ".join(message.content.split(" ")[1: ])
