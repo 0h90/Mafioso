@@ -13,6 +13,12 @@ class Character(ABC):
         self.act_alone = True
         self.emoji = 0
 
+    def get_player_id(self):
+        return self.player_id
+
+    def get_player_name(self):
+        return self.player_name
+        
     def get_emoji(self):
         return self.emoji
 

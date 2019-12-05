@@ -53,6 +53,15 @@ class MessageManager():
         # Channel manager object
         self.channel_manager = None
 
+        # Voted
+        self.player_vote_map = {}
+
+        # Vote map
+        self.vote_count_map = defaultdict(int)
+
+        # Individual role act map
+        self.player_act_map = {}
+
     def admin_check(self, player_id):
         if player_id == self.game_admin.id:
             return True
@@ -164,7 +173,7 @@ class MessageManager():
         try:
             (msg_info, msg) = self.key_messages[reaction.message.id]
         except KeyError:
-            print("Reaction on {}. Not found in key_messages.".format(msg.id))
+            print("Reaction on {}. Not found in key_messages.".format(reaction.message.id))
             return
 
         if msg_info == "info":
@@ -199,6 +208,60 @@ class MessageManager():
                 edited_message = " ".join(reaction.message.content.split(" ")[:2]) + " " + str(self.player_manager.get_char_count(msg_info))
                 await reaction.message.edit(content=edited_message)
                 await reaction.message.remove_reaction(str(reaction.emoji), self.game_admin)
+    
+    async def handle_game_loop_reaction(self, reaction, player_id):
+        msg = None
+        msg_info = ""
+
+        try:
+            (msg_info, msg) = self.key_messages[reaction.message.id]
+        except KeyError:
+            print("Reaction on {}. Not found in key_messages.".format(reaction.message.id))
+
+        if msg_info == "vote":
+            if not self.verify_appropriate_reaction(player_id, self.player_vote_map, reaction):
+                return
+
+            if reaction.emoji == "❌":
+                vote_id = self.player_vote_map.pop(player_id)
+                self.vote_count_map[vote_id] -= 1
+            elif reaction.emoji in self.player_manager.get_alive_unicode_emoji_set():
+                choose_id = self.player_manager.get_player_id_from_emoji(reaction.emoji)
+                # Add vote to player_vote_map
+                # Increment vote count
+                self.player_vote_map[player_id] = choose_id
+                self.vote_count_map[choose_id] += 1
+                msg = "Votes:\n" + self.craft_vote_message()
+                await reaction.message.edit(content=msg)
+        
+        elif msg_info == "act":
+            if not self.verify_appropriate_reaction(player_id, self.player_act_map, reaction):
+                return
+
+            if reaction.emoji == "❌":
+                self.player_act_map.pop(player_id)
+            elif reaction.emoji in self.player_manager.get_alive_unicode_emoji_set():
+                choose_id = self.player_manager.get_player_id_from_emoji(reaction.emoji)
+                self.player_act_map[player_id] = choose_id
+
+
+    def verify_appropriate_reaction(self, player_id, map_to_verify, reaction):
+        if player_id not in map_to_verify and reaction.emoji == "❌":
+            await reaction.message.remove_reaction(str(reaction.emoji), self.guild.get_member(player_id))
+            return False
+        if player_id in map_to_verify and reaction.emoji != "❌":
+            await reaction.message.remove_reaction(str(reaction.emoji), self.guild.get_member(player_id))
+            await reaction.message.channel.send("{} Please remove your choice before choosing again!".format(self.guild.get_member(player_id).mention()))
+            return False
+
+        return True
+               
+    def craft_vote_message(self):
+        msg = ""
+        for player_id in self.player_manager.get_alive():
+            msg += "{} : {}\n".format(self.guild.get_member(player_id).name, self.vote_count_map[player_id])
+        
+        return msg
 
     async def send_character_key_message(self, current_type):
         curr_msg = await self.init_channel.send("{} count: {}".format(current_type, self.characters[current_type]))
@@ -249,7 +312,7 @@ class MessageManager():
             # Store the msg obj in key_messages
             self.key_messages[msg_obj.id] = ("act", msg_obj)
     
-    async def send_lynch_key_message(self):
+    async def send_group_vote_key_message(self, channel_name):
         emoji_map = self.player_manager.get_alive_emoji_map()
 
         msg = "`Lynch Pane`\n"
@@ -257,15 +320,22 @@ class MessageManager():
             msg += "{}: {}\n".format(emoji_name, self.guild.get_member(player_id).name)
         
         unicode_mappings = self.player_manager.get_emoji_unicode_map()
-        channel_obj = self.channel_manager.get_channel_by_name("lynch-pane")
+        channel_obj = self.channel_manager.get_channel_by_name(channel_name)
+
+        if channel_obj is None:
+            print("Attempt to fetch channel failed: {}".format(channel_name))
+            return
+
         msg_obj = channel_obj.send(msg)
 
         for _, emoji_name in emoji_map.items():
             msg_obj.add_reaction(unicode_mappings[emoji_name])
 
-        self.key_messages[msg_obj.id] = ("lynch", msg_obj)
+        self.key_messages[msg_obj.id] = ("vote", msg_obj)
     
-    async def send_public_message(self, message):
-
+    async def send_to_channel(self, message, channel_name):
+        channel_obj = self.channel_manager.get_channel_by_name(channel_name)
+        channel_obj.send(message)
+    
     def get_guild(self):
         return self.guild

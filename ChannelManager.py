@@ -162,6 +162,8 @@ class ChannelManager():
         for name, channel_obj in self.group_role_channels.items():
             if channel_name == name:
                 return channel_obj
+        
+        return None
     
     def get_group_role_channels(self):
         return self.group_role_channels

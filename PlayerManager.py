@@ -32,6 +32,22 @@ class PlayerManager():
             ":elephant:" : "🐘"
         }
 
+        self.unicode_emoji_map = {
+            "🐔" : ":chicken:",
+            "🐦" : ":bird:",
+            "🐤" : ":baby_chick:",
+            "🐶" : ":dog:",
+            "🐰" : ":rabbit:",
+            "🐸" : ":frog:",
+            "🐒" : ":monkey:",
+            "🐼" : ":panda_face:",
+            "🐴" : ":horse:",
+            "🦆" : ":duck:",
+            "🐍" : ":snake:",
+            "🐳" : ":whale:",
+            "🐘" : ":elephant:"
+        }
+
         # Set of allowable characters
         self.character_set = set([
             "Mafia",
@@ -60,9 +76,6 @@ class PlayerManager():
         # Map of player ids to character object
         self.player_map = {}
 
-        # Map of player to emojis
-        self.player_emoji_map = {}
-
         # Set of alive players
         self.alive_players = set()
 
@@ -74,6 +87,8 @@ class PlayerManager():
 
         # Message manager object
         self.message_manager = None
+
+        self.guild = None
 
 
     def set_message_manager(self, message_manager):
@@ -108,7 +123,7 @@ class PlayerManager():
                     self.player_map[rand_player] = Cop.Cop(rand_player, member_obj.name, emoji)
                 elif char_type == "TownCrier":
                     self.player_map[rand_player] = TownCrier.TownCrier(rand_player, member_obj.name, emoji)
-        
+                
     def try_inc_char_count(self, character):
         if self.total_character_count >= len(self.player_set):
             return False
@@ -149,14 +164,27 @@ class PlayerManager():
 
     def get_emoji_unicode_map(self):
         return self.emoji_unicode_map
+    
+    def get_unicode_emoji_map(self):
+        return self.unicode_emoji_map
 
     def get_alive_emoji_map(self):
         emoji_map = {}
 
         for player_id in self.alive_players:
-            emoji_map[player_id] = self.player_map[player_id].emoji
+            emoji_map[player_id] = self.player_map[player_id].get_emoji()
         
         return emoji_map
+    
+    def get_alive_unicode_emoji_set(self):
+        emoji_set = set()
+
+        for player_id in self.alive_players:
+            emoji_name = self.player_map[player_id].get_emoji()
+            emoji = self.emoji_unicode_map[emoji_name]
+            emoji_set.add(emoji)
+        
+        return emoji_set
 
     def kill_player(self, player_id):
         player_obj = self.alive_players.remove(player_id)
@@ -175,3 +203,19 @@ class PlayerManager():
     
     def get_character_info(self, character):
         return self.character_info[character]
+    
+    def get_player_obj_by_emoji(self, emoji):
+        for _, character_obj in self.player_map.items():
+            if character_obj.get_emoji() == emoji:
+                return character_obj
+        
+        print("Could not find player by emoji: {}".format(emoji))
+        return None
+    
+    def get_player_name_from_id(self, player_id):
+        return self.guild.get_member(player_id).name
+    
+    def get_player_id_from_emoji(self, unicode_emoji):
+        emoji = self.get_unicode_emoji_map()[unicode_emoji]
+        character_obj = self.get_player_obj_by_emoji(emoji)
+        return character_obj.get_player_id()
