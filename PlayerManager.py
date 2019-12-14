@@ -9,7 +9,7 @@ from datetime import datetime
 from Characters import *
 
 class PlayerManager():
-    def __init__(self):
+    def __init__(self, message_manager):
         # Set of player ids
         self.player_set = set()
 
@@ -31,6 +31,10 @@ class PlayerManager():
             ":whale:" : "🐳",
             ":elephant:" : "🐘"
         }
+
+        self.unicode_emoji_map = {}
+        for k,v in self.emoji_unicode_map:
+            self.unicode_emoji_map[v] = k
 
         self.unicode_emoji_map = {
             "🐔" : ":chicken:",
@@ -86,13 +90,9 @@ class PlayerManager():
         self.mafia_map = {}
 
         # Message manager object
-        self.message_manager = None
+        self.message_manager = message_manager
 
         self.guild = None
-
-
-    def set_message_manager(self, message_manager):
-        self.message_manager = message_manager
 
     def init_player_characters(self):
         guild = self.message_manager.get_guild()

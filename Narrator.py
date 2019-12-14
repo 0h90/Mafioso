@@ -110,64 +110,7 @@ class Narrator():
         # Set guild
         self.guild = message_manager.get_guild()
 
-        # Create roles
-        self.roles["Dead"] = await message.guild.create_role(name="Dead")
-        self.roles["Day"] = await message.guild.create_role(name="Day")
-        self.roles["Night"] = await message.guild.create_role(name="Night")
-        self.roles["Alive"] = await message.guild.create_role(name="Alive")
-
-        await self.roles["Dead"].edit(position=1, hoist=True)
-        await self.roles["Alive"].edit(position=1, hoist=True)
-
-        # Create permissions and channels
-        base_perms = { message.guild.default_role : discord.PermissionOverwrite(read_messages=False,send_messages=False) }
-        base_perms[self.roles["Dead"]] = discord.PermissionOverwrite(read_messages=True)
-        
-        mafia_perms = base_perms.copy()
-        mafia_perms[self.roles["Alive"]] = discord.PermissionOverwrite(send_messages=True)
-
-        for player, val in self.mafia.items():
-            mafia_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
-        
-        mafia_channel = await message.guild.create_text_channel("mafia", overwrites=mafia_perms)
-        self.night_channels["mafia"].append(mafia_channel)
-
-        for player, val in self.mafia.items():
-            self.player_channels[player] = mafia_channel
-
-        villager_perms = base_perms.copy()
-
-        for player, val in self.players.items():
-            villager_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
-
-        villager_perms[self.roles["Day"]] = discord.PermissionOverwrite(send_messages=True)
-        villager_perms[self.roles["Night"]] = discord.PermissionOverwrite(send_messages=False)
-
-        self.day_channels["townhall"].append(await message.guild.create_text_channel("townhall", overwrites=villager_perms))
-
-        dead_perms = base_perms.copy()
-        dead_perms[self.roles["Dead"]] = discord.PermissionOverwrite(read_messages=True,send_messages=True)
-        self.dead_channel = await message.guild.create_text_channel("Dead", overwrites=dead_perms)
-
-        for player, val in self.players.items():
-            if val.name == "Mafia":
-                continue
-            if val.can_act is True:
-                curr_perms = base_perms.copy()
-                curr_perms[message.guild.get_member(player)] = discord.PermissionOverwrite(read_messages=True)
-                if val.act_time == "Day":
-                    curr_perms[self.roles["Day"]] = discord.PermissionOverwrite(send_messages=True)
-                    player_channel = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
-                    self.day_channels[val.name].append(player_channel)
-                elif val.act_time == "Night":
-                    curr_perms[self.roles["Night"]] = discord.PermissionOverwrite(send_messages=True)
-                    player_channel = await message.guild.create_text_channel(val.name, overwrites=curr_perms)
-                    self.night_channels[val.name].append(player_channel)
-                self.player_channels[player] = player_channel
-        
-        
-        for player_id, channel in self.player_channels.items():
-            await channel.send("{} You are a {}.\n{}".format(self.guild.get_member(player_id).mention, self.players[player_id].name, self.players[player_id].whoami()))
+        player_manager.init_player_characters()
 
         help_msg = (
             "`!act <number>` - Act on <number\> if your role has the ability to `!act`.\n"
@@ -176,7 +119,8 @@ class Narrator():
             "`!timer` - Vote to start a timer which forces a lynch in 1 minute.\n"
             "`!gamecomp` - List dead players and the game composition.\n"
             "`!list` - Lists players and their act numbers.\n"
-            "`!lastwill <message>` - Adds <message\> as your lastwill, to be displayed on death.\n"
+            "`!lastwill <message>` - Adds <message\> as your lastwill, to be displayed on death (only for cowards)\n"
+            "`!help - Displays this help message.\n"
         )
 
         await self.broadcast_message("townhall", help_msg) 

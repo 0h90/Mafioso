@@ -7,19 +7,16 @@ import random
 from datetime import datetime
 from enum import Enum
 from ChannelManager import ChannelManager
-
-class GameState(Enum):
-    PRE_INIT = 0
-    INITIALISE = 1
-    STARTED = 2
-    FINISHED = 3
+from PlayerManager import PlayerManager
+from InteractionManager import InteractionManager
+from Misc import *
 
 class MessageManager():
     def __init__(
         self, 
         self_id, 
         game_admin,
-        player_manager):
+        ):
 
         # The bot's ID
         self.self_id = self_id 
@@ -40,15 +37,14 @@ class MessageManager():
         # channel -> Channel object
         self.key_messages = {}
         
-        # Command regex
-        # (!)(<command>)
-        self.regex = re.compile("(^\!)([^ ]+)")
-        
         # Default channel to send messages to
         self.init_channel = None
 
-        # Player manager object
-        self.player_manager = player_manager
+        # Player manager object, this is the object that manages players.
+        # Assign the player_manager parameter to self.player_manager.
+        # This is done by the "=" sign, which assigns the player manager (which manages players).
+        # This is also known as the player manager (see the PlayerManager class for more information).
+        self.player_manager = None
 
         # Channel manager object
         self.channel_manager = None
@@ -69,97 +65,88 @@ class MessageManager():
         return False
 
     async def handle_message(self, message):
-        result = re.search(self.regex, message.content)
-        if result is not None:
-            command = result.group(2)
+        command = message.content.split(" ")[0]
 
-            if command == "help":
-                help_msg = (
-                    "[*] Misc\n"
-                    "`!init` - Initialise and set game players,\n"
-                    "`!help` - Display this message.\n"
-                    "[*] Gameplay \n"
-                    "`!act <number>` - Act on <number\> if your role has the ability to `!act`.\n"
-                    "`!lynch <number>` - Vote to lynch a player.\n"
-                    "`!abstain` - Abstain from lynching. If you already voted - removes your vote.\n"
-                    "`!tovote` - Gets players who have not voted for lynching.\n"
-                    "`!timer` - Vote to start a timer which forces a lynch in 1 minute.\n"
-                    "`!gamecomp` - List dead players and the game composition.\n"
-                    "`!list` - Lists players and their act numbers.\n"
-                )
-                await message.channel.send(help_msg)
-                
-            if command == "init":
-                if self.game_state != GameState.PRE_INIT:
-                    await message.channel.send("Game is already running")
-                    return
-                self.game_state = GameState.INITIALISE
-                self.game_admin = message.author
-                self.init_channel = message.channel
-                self.guild = message.guild
-                self.channel_manager = ChannelManager(message.guild)
-
-                await self.send_init_key_message()
-
-                for character in self.player_manager.get_character_set():
-                    await self.send_character_key_message(character)
+        # if the command is help
+        if command == "help":
+            help_msg = (
+                "[*] Misc\n"
+                "`!init` - Initialise and set game players,\n"
+                "`!help` - Display this message.\n"
+                "[*] Gameplay \n"
+                "`!act <number>` - Act on <number\> if your role has the ability to `!act`.\n"
+                "`!lynch <number>` - Vote to lynch a player.\n"
+                "`!abstain` - Abstain from lynching. If you already voted - removes your vote.\n"
+                "`!tovote` - Gets players who have not voted for lynching.\n"
+                "`!timer` - Vote to start a timer which forces a lynch in 1 minute.\n"
+                "`!gamecomp` - List dead players and the game composition.\n"
+                "`!list` - Lists players and their act numbers.\n"
+            )
+            await message.channel.send(help_msg)
             
-            elif command == "lynch":
-                await self.narrator.on_lynch(message)
-            
-            elif command == "abstain":
-                await self.narrator.on_abstain(message)
-            
-            elif command == "tovote":
-                await self.narrator.broadcast_tolynch()
-            
-            elif command == "gamecomp":
-                await self.narrator.broadcast_censoredcomp()
-            
-            elif command == "list":
-                await self.narrator.on_player_list(message)
-            
-            elif command == "lastwill":
-                await self.narrator.on_lastwill(message)
+        if command == "!init":
+            if self.game_state != GameState.PRE_INIT:
+                await message.channel.send("Game is already running")
+                return
+            self.game_admin = message.author
+            self.init_channel = message.channel
+            self.guild = message.guild
 
-            elif command == "timer":
-                async def coroutine():
-                    await asyncio.sleep(60)
-                    if self.narrator.update_c == 0:
-                        await self.narrator.finalise(message)                    
-                    return "Done"
-                
-                if self.narrator.get_time() == "Night":
-                    return
-                
-                self.timer_votes += 1
-                print("Curr votes: {}".format(self.timer_votes))
-                print ("Returned votes: {} and /2: {}".format(self.narrator.get_alive_count(), (self.narrator.get_alive_count() / 2)))
-                if self.timer_votes < (self.narrator.get_alive_count() / 2):
-                    await self.narrator.broadcast_message("Town Hall" , "Require: {} more votes".format(math.ceil(self.narrator.get_alive_count() / 2) - self.timer_votes))
-                    return
-                
-                self.timer_votes = 0
+            # Set game_state to INITIALISE
+            self.game_state = GameState.INITIALISE
 
-                await self.narrator.broadcast_message("Town Hall", "Starting timer, 1 minute until forced lynch.")
-                self.narrator.update_c = 0
-                asyncio.create_task(coroutine())
+        elif command == "lynch":
+            await self.narrator.on_lynch(message)
+        
+        elif command == "abstain":
+            await self.narrator.on_abstain(message)
+        
+        elif command == "tovote":
+            await self.narrator.broadcast_tolynch()
+        
+        elif command == "gamecomp":
+            await self.narrator.broadcast_censoredcomp()
+        
+        elif command == "list":
+            await self.narrator.on_player_list(message)
+        
+        elif command == "timer":
+            async def coroutine():
+                await asyncio.sleep(60)
+                if self.narrator.update_c == 0:
+                    await self.narrator.finalise(message)                    
+                return "Done"
+            
+            if self.narrator.get_time() == "Night":
+                return
+            
+            self.timer_votes += 1
+            print("Curr votes: {}".format(self.timer_votes))
+            print ("Returned votes: {} and /2: {}".format(self.narrator.get_alive_count(), (self.narrator.get_alive_count() / 2)))
+            if self.timer_votes < (self.narrator.get_alive_count() / 2):
+                await self.narrator.broadcast_message("Town Hall" , "Require: {} more votes".format(math.ceil(self.narrator.get_alive_count() / 2) - self.timer_votes))
+                return
+            
+            self.timer_votes = 0
 
-            elif command == "reset":
-                if message.author == self.game_admin or (self.narrator.is_resettable()):
-                    self.game_admin = ""
-                    self.being_setup = False
-                    self.game_running = False
-                    self.characters = defaultdict(int)
-                    self.total_players = 0
-                    self.participants = []
-                    self.get_participants_message = ""
-                    old_narrator = self.narrator
-                    self.narrator = Narrator.Narrator()
-                    await old_narrator.cleanup()
-                    self.narrator = Narrator.Narrator()
+            await self.narrator.broadcast_message("Town Hall", "Starting timer, 1 minute until forced lynch.")
+            self.narrator.update_c = 0
+            asyncio.create_task(coroutine())
 
-
+        elif command == "reset":
+            if message.author == self.game_admin or (self.narrator.is_resettable()):
+                self.game_admin = ""
+                self.being_setup = False
+                self.game_running = False
+                self.characters = defaultdict(int)
+                self.total_players = 0
+                self.participants = []
+                self.get_participants_message = ""
+                old_narrator = self.narrator
+                self.narrator = Narrator.Narrator()
+                await old_narrator.cleanup()
+                self.narrator = Narrator.Narrator()
+                #
     async def handle_reaction(self, reaction, player_id):
         if self.game_state == GameState.INITIALISE:
             await self.handle_game_start_reaction(reaction, player_id)
@@ -190,7 +177,13 @@ class MessageManager():
                         msg += "Final {} count: {}\n".format(character, count)
                     
                     await self.init_channel.send(msg)
-                    await self.narrator.create(message, self.characters, self.participants)
+
+                    self.player_manager = PlayerManager(self)
+                    self.player_manager.init_player_characters()
+                    self.channel_manager = ChannelManager(self, self.player_manager)
+                    self.channel_manager.init()
+                    self.interaction_manager = InteractionManager(self, self.player_manager, self.channel_manager) 
+                    self.interaction_manager.init()
                     
         elif msg_info in self.player_manager.get_character_set():
             if self.admin_check(player_id):
@@ -228,7 +221,6 @@ class MessageManager():
             elif reaction.emoji in self.player_manager.get_alive_unicode_emoji_set():
                 choose_id = self.player_manager.get_player_id_from_emoji(reaction.emoji)
                 # Add vote to player_vote_map
-                # Increment vote count
                 self.player_vote_map[player_id] = choose_id
                 self.vote_count_map[choose_id] += 1
                 msg = "Votes:\n" + self.craft_vote_message()
@@ -281,7 +273,11 @@ class MessageManager():
         await curr_msg.add_reaction("🟢")
     
     # TODO: Make argument-less. Just use the reference to ChannelManager
-    async def send_welcome_message(self, other_channels, group_channels, private_channels):
+    async def send_welcome_message(self):
+        other_channels = self.channel_manager.get_other_channels()
+        group_channels = self.channel_manager.get_group_role_channels()
+        private_channels = self.channel_manager.get_private_role_channels()
+
         for channel_name, channel_obj in other_channels.items():
             if channel_name == "villager-discussion":
                 channel_obj.send("Welcome! This is where all the day-time discussion goes. Have fun!")
@@ -312,10 +308,10 @@ class MessageManager():
             # Store the msg obj in key_messages
             self.key_messages[msg_obj.id] = ("act", msg_obj)
     
-    async def send_group_vote_key_message(self, channel_name):
+    async def send_group_vote_key_message(self, channel_name, pane_name):
         emoji_map = self.player_manager.get_alive_emoji_map()
 
-        msg = "`Lynch Pane`\n"
+        msg = pane_name + "\n"
         for player_id, emoji_name in emoji_map.items():
             msg += "{}: {}\n".format(emoji_name, self.guild.get_member(player_id).name)
         
@@ -339,3 +335,9 @@ class MessageManager():
     
     def get_guild(self):
         return self.guild
+
+    def get_game_state(self):
+        return self.game_state
+
+    def set_game_state(self, new_state):
+        self.game_state = new_state

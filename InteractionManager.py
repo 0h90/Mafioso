@@ -1,15 +1,24 @@
 from collections import defaultdict
+from Misc import GameState
 
 class InteractionManager():
-    def __init__(self, channel_manager, game_comp, time):
-        self.channel_manager = channel_manager
+    def __init__(
+        self,
+        message_manager,
+        player_manager,
+        channel_manager
+    ):
+        self.message_manager = message_manager
 
-        self.game_comp = game_comp
+        self.player_manager = player_manager
+
+        self.channel_manager = channel_manager
 
         self.alive_players = {}
 
         self.dead_players = {}
 
+        # This is the mafia
         self.mafia = {}
 
         self.votes = {}
@@ -28,11 +37,27 @@ class InteractionManager():
 
         self.individual_msgs = {}
 
-        self.game_time = time
+        self.game_time = "day"
 
         self.time_limit = 180
 
         self.finalised = True
+    
+        self.guild = None
+
+        self.message_manager = None
+
+        self.player_manager = None
+
+        self.channel_manager = None
+
+    async def init(
+        self
+    ):
+        self.guild = self.message_manager.get_guild()
+
+        self.message_manager.send_welcome_message()
+        self.message_manager.set_game_state(GameState.STARTED)
 
     async def finalise(self):
         self.finalised = True
@@ -40,7 +65,7 @@ class InteractionManager():
         if player_to_kill == -1:
             if self.game_time == "Day":
                 self.channel_manager.broadcast_villager_message("@here Tie when voting. No one will die.")
-            elif self.game_time == "Night":"
+            elif self.game_time == "Night":
                 self.channel_manager.broadcast_mafia_message("@here Tie when voting.")
                 return
         else:

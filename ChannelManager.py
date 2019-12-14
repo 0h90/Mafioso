@@ -21,7 +21,7 @@ class RoleEnums(Enum):
     DEAD = "dead"
     
 class ChannelManager():
-    def __init__(self):
+    def __init__(self, message_manager, player_manager):
         # Dictionary of town-discussion and dead channels
         # Key -> String, Channel name
         # Val -> Channel obj
@@ -56,22 +56,16 @@ class ChannelManager():
         # Value => Discord.Role object
         self.roles = {}
 
-        self.message_manager = None
+        self.message_manager = message_manager
 
-        self.interaction_manager = None
-        
-        self.player_manager = None
+        self.player_manager = player_manager
 
         self.guild = None
 
     def init(
         self, 
-        message_manager,
-        player_manager):
-
-        self.message_manager = message_manager
-        self.player_manager = player_manager
-        self.guild = message_manager.get_guild()
+        ):
+        self.guild = self.message_manager.get_guild()
 
         # Create roles
         self.create_role(RoleEnums.DAY)
